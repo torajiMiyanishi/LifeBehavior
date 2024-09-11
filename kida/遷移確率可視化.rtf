@@ -1,0 +1,36 @@
+{\rtf1\ansi\ansicpg932\cocoartf2708
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 import matplotlib.pyplot as plt\
+import seaborn as sns\
+import numpy as np\
+import japanize_matplotlib\
+\
+# \uc0\u12498 \u12540 \u12488 \u12510 \u12483 \u12503 \u12434 \u25551 \u30011 \u12377 \u12427 \u38306 \u25968 \
+def plot_transition_heatmaps(transition_rates, activity_list, time_list):\
+    num_time_intervals = len(time_list)\
+    num_activities = len(activity_list)\
+\
+    # \uc0\u26178 \u38291 \u12372 \u12392 \u12395 \u12498 \u12540 \u12488 \u12510 \u12483 \u12503 \u12434 \u25551 \u30011 \
+    fig, axes = plt.subplots(nrows=5, ncols=5, figsize=(20, 20))\
+    axes = axes.flatten()  # 5x5\uc0\u12398 \u12464 \u12522 \u12483 \u12489 \u12395 \u12375 \u12390 1\u27425 \u20803 \u12395 \u23637 \u38283 \
+\
+    for i in range(min(num_time_intervals, 25)):  # \uc0\u26368 \u22823 25\u26178 \u38291 \u20998 \u25551 \u30011 \
+        ax = axes[i]\
+        sns.heatmap(transition_rates[i], annot=False, cmap='coolwarm', cbar=True, vmin=0, vmax=1, ax=ax)\
+        ax.set_title(f"\{i\}-\{(i+1)%24\}\uc0\u26178 ", fontsize=10)\
+        ax.set_xticks(np.arange(len(activity_list)) + 0.5)\
+        ax.set_yticks(np.arange(len(activity_list)) + 0.5)\
+        ax.set_xticklabels(activity_list, rotation=90, fontsize=8)\
+        ax.set_yticklabels(activity_list, rotation=0, fontsize=8)\
+    \
+    plt.tight_layout()\
+    plt.show()\
+\
+# \uc0\u20808 \u12411 \u12393 \u35336 \u31639 \u12375 \u12383  transition_rates_hourly \u12434 \u20351 \u29992 \u12375 \u12390 \u12498 \u12540 \u12488 \u12510 \u12483 \u12503 \u12434 \u20316 \u25104 \
+plot_transition_heatmaps(transition_rates_hourly, activity_list_hourly, time_list_hourly)\
+}
