@@ -7,7 +7,7 @@ public class Behavior {
 
     public static final String DIR_DATA = "Z:\\lab\\lifebehavior\\"; // 遷移確率のディレクトリ
 
-    private static final Map<String, TransitionProbabilityData> transitionDataMap = new HashMap<>(); // キャッシュ用マップ
+    private static final Map<AttributeType, TransitionProbabilityData> AlltransitionDataMap = new HashMap<>(); // キャッシュ用マップ
     public static final List<String> ACTIVITY_ORDERING = List.of(
             "睡眠", "食事", "身のまわりの用事", "療養・静養", "仕事", "仕事のつきあい", "授業・学内の活動",
             "学校外の学習", "炊事・掃除・洗濯", "買い物", "子どもの世話", "家庭雑事", "通勤", "通学", "社会参加",
@@ -20,9 +20,17 @@ public class Behavior {
 
     // 「外出」「在宅」を表す enum の定義
     public enum LocationType {
-        OUTDOOR,    // 外出
-        INDOOR      // 在宅
+        OUTDOOR, INDOOR      // 外出，在宅
     }
+    // 属性情報の定義
+    public enum Gender {
+        MALE, FEMALE // 男性，女性
+    }
+    public enum AttributeType {
+        MALE_10, MALE_20, MALE_30, MALE_40, MALE_50, MALE_60, MALE_70, FEMALE_10, FEMALE_20, FEMALE_30, FEMALE_40, FEMALE_50, FEMALE_60, FEMALE_70
+    }
+
+
 
     public enum BehaviorType {
         PERSONAL_CARE,       // 身のまわりの用事
@@ -106,31 +114,49 @@ public class Behavior {
         BEHAVIOR_LOCATION_LABEL.put(BehaviorType.REST, LocationType.INDOOR);
     }
 
-
-    // 属性情報の定義
-    public enum Gender {
-        MALE, FEMALE
+    public static AttributeType generateAttributeType(int age, String gender){
+        String ageStr;
+        // 年代の判定
+        if (age >= 0 && age < 20) {
+            ageStr = "10";
+        } else if (age >= 20 && age < 30) {
+            ageStr = "20";
+        } else if (age >= 30 && age < 40) {
+            ageStr = "30";
+        } else if (age >= 40 && age < 50) {
+            ageStr = "40";
+        } else if (age >= 50 && age < 60) {
+            ageStr = "50";
+        } else if (age >= 60 && age < 70) {
+            ageStr = "60";
+        } else {
+            ageStr = "70";
+        }
+        return AttributeType.valueOf(gender+"_"+ageStr);
     }
 
 
+
     // ファイルパスをジェンダーと年齢に基づいて生成
-    public static String getFilePath(Gender gender, int age, Day.DayType dayType) {
-        String genderStr = (gender == Gender.MALE) ? "男" : "女";
+    public static String getFilePath(AttributeType attributeType, Day.DayType dayType) {
+        String[] parts      = attributeType.toString().split("_");
+        Gender gender       = Gender.valueOf(parts[0]);
+        String genderStr    = (gender == Gender.MALE) ? "男" : "女";
         String dayOfWeek;
         String ageStr;
 
         // 年代の判定
-        if (age >= 0 && age < 20) {
+        if (parts[1].equals("10")) {
             ageStr = "１０代";
-        } else if (age >= 20 && age < 30) {
+        } else if (parts[1].equals("20")) {
             ageStr = "２０代";
-        } else if (age >= 30 && age < 40) {
+        } else if (parts[1].equals("30")) {
             ageStr = "３０代";
-        } else if (age >= 40 && age < 50) {
+        } else if (parts[1].equals("40")) {
             ageStr = "４０代";
-        } else if (age >= 50 && age < 60) {
+        } else if (parts[1].equals("50")) {
             ageStr = "５０代";
-        } else if (age >= 60 && age < 70) {
+        } else if (parts[1].equals("60")) {
             ageStr = "６０代";
         } else {
             ageStr = "７０歳以上";
@@ -214,79 +240,49 @@ public class Behavior {
     // イニシャライザ：すべての属性ごとにTransitionProbabilityDataを読み込んでキャッシュする
     public static void initialize() throws Exception {
         // サンプルの属性ごとに全ファイルをロードする（年齢、性別、曜日を組み合わせたすべてのファイル）
-        Gender[] genders = {Gender.MALE, Gender.FEMALE};
-        int[] ages = {10, 20, 30, 40, 50, 60, 70};
+        for (AttributeType attributeType : AttributeType.values()) {
+            // 各曜日ごとにファイルパスを生成し、対応する行列をロードする
+            String filePathWeekday = getFilePath(attributeType, Day.DayType.MONDAY);
+            double[][][] matrixWeekday = loadFromJson(filePathWeekday);
 
-        for (Gender gender : genders) {
-            for (int age : ages) {
-                // 各曜日ごとにファイルパスを生成し、対応する行列をロードする
-                String filePathWeekday = getFilePath(gender, age, Day.DayType.MONDAY);
-                double[][][] matrixWeekday = loadFromJson(filePathWeekday);
+            String filePathSaturday = getFilePath(attributeType, Day.DayType.SATURDAY);
+            double[][][] matrixSaturday = loadFromJson(filePathSaturday);
 
-                String filePathSaturday = getFilePath(gender, age, Day.DayType.SATURDAY);
-                double[][][] matrixSaturday = loadFromJson(filePathSaturday);
+            String filePathSunday = getFilePath(attributeType, Day.DayType.SUNDAY);
+            double[][][] matrixSunday = loadFromJson(filePathSunday);
 
-                String filePathSunday = getFilePath(gender, age, Day.DayType.SUNDAY);
-                double[][][] matrixSunday = loadFromJson(filePathSunday);
+            // 3つの行列（平日、土曜日、日曜日）を持つTransitionProbabilityDataをキャッシュに格納
+            AlltransitionDataMap.put(attributeType, new TransitionProbabilityData(matrixWeekday, matrixSaturday, matrixSunday));
+        }
+    }
 
-                // キャッシュに格納するためのキーを生成
-                String key = gender + "_" + age;
 
-                // 3つの行列（平日、土曜日、日曜日）を持つTransitionProbabilityDataをキャッシュに格納
-                transitionDataMap.put(key, new TransitionProbabilityData(matrixWeekday, matrixSaturday, matrixSunday));
+    // 指定された属性，時刻，曜日の遷移する行動を確率的に算出するメソッド
+    public static Behavior.BehaviorType getNextBehavior(AttributeType attributeType, BehaviorType currentBehavior, int current_h, int current_m, Day.DayType currentDay){
+        double[] probabilities = AlltransitionDataMap.get(attributeType).getTransitionProbabilities(
+                Behavior.BEHAVIOR_TYPE_ORDERING.indexOf(currentBehavior),Day.getTimeTick(current_h,current_m),currentDay);
+        // ルーレット選択を行う
+        // 確率の合計を計算
+        double sum = 0.0;
+        for (double probability : probabilities) {
+            sum += probability;
+        }
+        // 0からsumの範囲で乱数を生成
+        Random rand = new Random();
+        double randomValue = rand.nextDouble() * sum;
+        // 累積確率を計算して選択する
+        Behavior.BehaviorType selectedBehavior = null;
+        double cumulativeProbability = 0.0;
+        for (int i = 0; i < probabilities.length; i++) {
+            cumulativeProbability += probabilities[i];
+            if (randomValue <= cumulativeProbability) {
+                selectedBehavior = Behavior.BEHAVIOR_TYPE_ORDERING.get(i);
+                break;
             }
         }
+        return selectedBehavior;
     }
 
-
-    // キャッシュされたTransitionProbabilityDataを取得する
-    public static TransitionProbabilityData getTransitionProbabilityData(Gender gender, int age) {
-        String ageStr;
-        if (age >= 0 && age < 20) {
-            ageStr = "10";
-        } else if (age >= 20 && age < 30) {
-            ageStr = "20";
-        } else if (age >= 30 && age < 40) {
-            ageStr = "30";
-        } else if (age >= 40 && age < 50) {
-            ageStr = "40";
-        } else if (age >= 50 && age < 60) {
-            ageStr = "50";
-        } else if (age >= 60 && age < 70) {
-            ageStr = "60";
-        } else {
-            ageStr = "70";
-        }
-        String key = gender + "_" + ageStr;
-//        System.out.println(key + "@getTransitionProbabilityData");
-        return deepCopy(transitionDataMap.get(key));  // キャッシュから取得して、複製して提供
-    }
-
-    public static TransitionProbabilityData deepCopy(TransitionProbabilityData transitionProbabilityData) {
-        // 曜日ごとに異なる行列を複製
-        double[][][] transitionMatrixWeekday = transitionProbabilityData.getTransitionMatrix(Day.DayType.MONDAY);
-        double[][][] copiedMatrixWeekday = copyMatrix(transitionMatrixWeekday);
-
-        double[][][] transitionMatrixSaturday = transitionProbabilityData.getTransitionMatrix(Day.DayType.SATURDAY);
-        double[][][] copiedMatrixSaturday = copyMatrix(transitionMatrixSaturday);
-
-        double[][][] transitionMatrixSunday = transitionProbabilityData.getTransitionMatrix(Day.DayType.SUNDAY);
-        double[][][] copiedMatrixSunday = copyMatrix(transitionMatrixSunday);
-
-        return new TransitionProbabilityData(copiedMatrixWeekday, copiedMatrixSaturday, copiedMatrixSunday);
-    }
-
-    // 行列の複製処理を行うメソッド
-    private static double[][][] copyMatrix(double[][][] originalMatrix) {
-        double[][][] copiedMatrix = new double[originalMatrix.length][][];
-        for (int i = 0; i < originalMatrix.length; i++) {
-            copiedMatrix[i] = new double[originalMatrix[i].length][];
-            for (int j = 0; j < originalMatrix[i].length; j++) {
-                copiedMatrix[i][j] = Arrays.copyOf(originalMatrix[i][j], originalMatrix[i][j].length);
-            }
-        }
-        return copiedMatrix;
-    }
 
     public static void main(String[] args) {
         try {
@@ -294,16 +290,13 @@ public class Behavior {
             Behavior.initialize();
 
             // 属性に基づいてTransitionProbabilityDataを取得
-            TransitionProbabilityData data = Behavior.getTransitionProbabilityData(Gender.MALE, 20);
 
             // 現在の行為nと時刻tから、遷移確率を取得する
-            int currentActivity = 0;  // 例: 行為2
-            int timeTick = 8;        // 例: 時刻12:00 (48個の15分ティック)
-            double[] probabilities = data.getTransitionProbabilities(currentActivity, timeTick, Day.DayType.MONDAY);
+            BehaviorType currentActivity = BehaviorType.SLEEP;
+            AttributeType attributeType = AttributeType.FEMALE_20;
+            BehaviorType nextBehavior = getNextBehavior(attributeType, currentActivity, 2, 0, Day.DayType.MONDAY);
 
-            for (int i = 0; i < probabilities.length; i++) {
-                System.out.println("行為 " + i + " への遷移確率: " + probabilities[i]);
-            }
+            System.out.println("Next behavior is "+ nextBehavior);
         } catch (Exception e) {
             e.printStackTrace();
         }

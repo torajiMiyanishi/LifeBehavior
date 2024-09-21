@@ -106,11 +106,11 @@ public class Main {
             TAgent human = humans.get(i); // i番目の人間エージェント
             TSpot home = homes.get(i); // i番目の人間エージェントの自宅
             human.initializeCurrentSpot(home); // 初期スポットを自宅に設定
-            new RoleOfHuman(human, 0, Behavior.Gender.MALE); // 人間役割を作成
+            new RoleOfHuman(human, age, gender); // 人間役割を作成
             human.activateRole(RoleName.Human); // 人間役割をアクティブ化
             new RoleOfResident(human, home, visitedLocation); // 住民役割を作成
             human.activateRole(RoleName.Resident); // 住民役割をアクティブ化
-            new RoleOfBehavior(human, currentBehavior, Behavior.getTransitionProbabilityData(gender,age)); // 行為者役割を作成
+            new RoleOfBehavior(human, currentBehavior); // 行為者役割を作成
             human.activateRole(RoleName.Behavior); // 行為者役割をアクティブ化
         }
 

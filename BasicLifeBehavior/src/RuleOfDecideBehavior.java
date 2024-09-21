@@ -46,7 +46,8 @@ public final class RuleOfDecideBehavior extends TAgentRule {
         if ( ! (currentTime.getDay() == 0 && currentTime.getHour() == 0 && currentTime.getMinute() == 0)){
             boolean debugFlag = true;
             RoleOfBehavior behaviorRole = (RoleOfBehavior) getOwnerRole();
-            Behavior.BehaviorType nextBehavior = behaviorRole.getNextBehavior(currentTime.getHour(),currentTime.getMinute(),Day.getDay(currentTime.getDay()));
+            Behavior.BehaviorType nextBehavior = Behavior.getNextBehavior(behaviorRole.getAttributeType(),behaviorRole.getCurrentBehavior()
+                    , currentTime.getHour(),currentTime.getMinute(),Day.getDay(currentTime.getDay()));
 
             /** 現在と次の行為で、外出/在宅が異なる場合、移動ルールを次のステージに予約 */
             Behavior.BehaviorType currentBehavior = behaviorRole.getCurrentBehavior();

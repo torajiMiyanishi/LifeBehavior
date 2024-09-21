@@ -27,4 +27,6 @@ public final class RoleOfHuman extends TRole {
         fAge = age;
         fGender = gender;
     }
+    public int getAge(){return fAge;}
+    public Behavior.Gender getGender(){return fGender;}
 }
