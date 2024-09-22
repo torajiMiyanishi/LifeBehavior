@@ -8,5 +8,5 @@ public enum RoleName {
     /** 住民役割 */
     Resident,
     /** 人間役割 */
-    Human,
+    Person,
 }

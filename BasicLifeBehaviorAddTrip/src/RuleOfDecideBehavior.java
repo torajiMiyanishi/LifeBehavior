@@ -17,7 +17,7 @@ import jp.soars.core.TRule;
 public final class RuleOfDecideBehavior extends TAgentRule {
 
     /** 移動するルール */
-    private final TRule fRuleOfAgentMoving;
+//    private final TRule fRuleOfAgentMoving;
 
 
     /**
@@ -25,10 +25,10 @@ public final class RuleOfDecideBehavior extends TAgentRule {
      * @param name ルール名
      * @param owner このルールをもつ役割
      */
-    public RuleOfDecideBehavior(String name, TRole owner, RuleOfAgentMoving ruleOfAgentMoving) {
+    public RuleOfDecideBehavior(String name, TRole owner) {
         // 親クラスのコンストラクタを呼び出す．
         super(name, owner);
-        fRuleOfAgentMoving = ruleOfAgentMoving;
+//        fRuleOfAgentMoving = ruleOfAgentMoving;
     }
 
     /**
@@ -50,12 +50,12 @@ public final class RuleOfDecideBehavior extends TAgentRule {
                     , currentTime.getHour(),currentTime.getMinute(),Day.getDay(currentTime.getDay()));
 
             /** 現在と次の行為で、外出/在宅が異なる場合、移動ルールを次のステージに予約 */
-            Behavior.BehaviorType currentBehavior = behaviorRole.getCurrentBehavior();
-            if (! Behavior.BEHAVIOR_LOCATION_LABEL.get(currentBehavior).equals(Behavior.BEHAVIOR_LOCATION_LABEL.get(nextBehavior))){
-                fRuleOfAgentMoving.setTimeAndStage(
-                        currentTime.getDay(),currentTime.getHour(),currentTime.getMinute(),currentTime.getSecond(),Stage.AgentMoving);
-//                System.out.println("Rule Reservation @RuleOfDecideBehavior");
-            }
+//            Behavior.BehaviorType currentBehavior = behaviorRole.getCurrentBehavior();
+//            if (! Behavior.BEHAVIOR_LOCATION_LABEL.get(currentBehavior).equals(Behavior.BEHAVIOR_LOCATION_LABEL.get(nextBehavior))){
+//                fRuleOfAgentMoving.setTimeAndStage(
+//                        currentTime.getDay(),currentTime.getHour(),currentTime.getMinute(),currentTime.getSecond(),Stage.AgentMoving);
+////                System.out.println("Rule Reservation @RuleOfDecideBehavior");
+//            }
 
             // 行為を更新
             behaviorRole.setCurrentBehavior(nextBehavior);

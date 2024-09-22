@@ -5,5 +5,5 @@
  */
 public enum AgentType {
     /** 人間 */
-    Human
+    Person
 }

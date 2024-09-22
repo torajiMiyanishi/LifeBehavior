@@ -1,3 +1,5 @@
+import org.joda.time.Days;
+import org.json.JSONObject;
 import org.json.JSONArray;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -6,8 +8,11 @@ import java.util.*;
 public class Behavior {
 
     public static final String DIR_DATA = "Z:\\lab\\lifebehavior\\"; // 遷移確率のディレクトリ
+    public static final String PATH_TO_INITIAL_BEHAVIOR_PROB = "Y:\\生活行動モデル\\data\\initialBehaviorProbabilities.json"; // 初期行為決定のための0:00における時間帯別行為者率
 
-    private static final Map<AttributeType, TransitionProbabilityData> AlltransitionDataMap = new HashMap<>(); // キャッシュ用マップ
+    private static final Map<AttributeType, TransitionProbabilityData> AlltransitionDataMap = new HashMap<>(); // 全ての属性のすべての時刻の遷移確率を持つ変数
+    private static final List<BehaviorProbByTime> InitialBehaviorProbs = new ArrayList<>(); // 全ての属性の0:00における行為者率を持つ変数
+
     public static final List<String> ACTIVITY_ORDERING = List.of(
             "睡眠", "食事", "身のまわりの用事", "療養・静養", "仕事", "仕事のつきあい", "授業・学内の活動",
             "学校外の学習", "炊事・掃除・洗濯", "買い物", "子どもの世話", "家庭雑事", "通勤", "通学", "社会参加",
@@ -237,8 +242,75 @@ public class Behavior {
         return transitionMatrix;
     }
 
-    // イニシャライザ：すべての属性ごとにTransitionProbabilityDataを読み込んでキャッシュする
+    // 時間帯別の行為者率を保持するデータ型の定義
+    public static class BehaviorProbByTime {
+        private AttributeType attributeType;
+        private Day.DayType dayType;
+        private int hour;
+        private int minute;
+        private HashMap<BehaviorType, Double> probs;
+
+        public BehaviorProbByTime(AttributeType attributeType, Day.DayType dayType, int hour, int minute, HashMap<BehaviorType, Double> probs) {
+            this.attributeType = attributeType;
+            this.dayType = dayType;
+            this.hour = hour;
+            this.minute = minute;
+            this.probs = probs;
+        }
+        // Getter
+        public AttributeType getAttribute(){
+            return attributeType;
+        }
+        public Day.DayType getDayType(){
+            return dayType;
+        }
+        public HashMap<BehaviorType, Double> getProbs(){
+            return probs;
+        }
+        public BehaviorType getBehaviorByRate() {
+            // まず、全ての確率を加算して総和を計算
+            double sum = 0.0;
+            for (double probability : probs.values()) {
+                sum += probability;
+            }
+
+            // 0 から sum の範囲で乱数を生成
+            Random rand = new Random();
+            double randomValue = rand.nextDouble() * sum;
+
+            // 累積確率を計算して選択する
+            double cumulativeProbability = 0.0;
+            BehaviorType selectedBehavior = null;
+
+            // 確率と対応する行為をループで確認
+            for (Map.Entry<BehaviorType, Double> entry : probs.entrySet()) {
+                cumulativeProbability += entry.getValue(); // 累積確率に加算
+                if (randomValue <= cumulativeProbability) {
+                    selectedBehavior = entry.getKey(); // 条件を満たした行為を選択
+                    break;
+                }
+            }
+
+            // 選択された行為を返す
+            return selectedBehavior;
+        }
+
+    }
+    // 属性と曜日からBehaviorProbByTimeを取得する
+    public static BehaviorProbByTime getBehaviorProbByTime(AttributeType attributeType, Day.DayType dayType){
+        for (BehaviorProbByTime probData: InitialBehaviorProbs){
+            if (probData.getAttribute() == attributeType && probData.getDayType() == dayType){
+                return probData;
+            }
+        }
+        System.out.println("データが存在しないエラー @Behavior.java");
+        System.out.println("AttributeType "+ attributeType + ", Day.DayType " + dayType);
+        return null;
+    }
+
+    // イニシャライザ
     public static void initialize() throws Exception {
+        /** すべての属性ごとにTransitionProbabilityDataを読み込んでキャッシュする */
         // サンプルの属性ごとに全ファイルをロードする（年齢、性別、曜日を組み合わせたすべてのファイル）
         for (AttributeType attributeType : AttributeType.values()) {
             // 各曜日ごとにファイルパスを生成し、対応する行列をロードする
@@ -254,6 +326,25 @@ public class Behavior {
             // 3つの行列（平日、土曜日、日曜日）を持つTransitionProbabilityDataをキャッシュに格納
             AlltransitionDataMap.put(attributeType, new TransitionProbabilityData(matrixWeekday, matrixSaturday, matrixSunday));
         }
+        /** 全ての属性，全ての曜日分の0:00の行為者率をjsonから読み込んでキャッシュする */
+        try {
+            String content = new String(Files.readAllBytes(Paths.get(PATH_TO_INITIAL_BEHAVIOR_PROB))); // ファイルを読み込んで文字列に変換
+            JSONObject jsonObject = new JSONObject(content); // JSON文字列をパース
+            // JSONオブジェクトを走査して Map に格納
+            for (String groupAndDay : jsonObject.keySet()) {
+                JSONObject innerObject = jsonObject.getJSONObject(groupAndDay);
+                HashMap<BehaviorType, Double> activityProb = new HashMap<>();
+                for (String activity : innerObject.keySet()) {
+                    activityProb.put(ACTIVITY_TO_BEHAVIOR_TYPE.get(activity), innerObject.getDouble(activity));
+                }
+                AttributeType attributeType = AttributeType.valueOf(groupAndDay.split("-")[0]);
+                Day.DayType dayType = Day.DayType.valueOf(groupAndDay.split("-")[1]);
+                InitialBehaviorProbs.add(new BehaviorProbByTime(attributeType, dayType,0,0,activityProb));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        System.out.println("Behavior is Initialized");
     }
 
 
@@ -283,8 +374,31 @@ public class Behavior {
         return selectedBehavior;
     }
 
-
     public static void main(String[] args) {
+        try {
+            String content = new String(Files.readAllBytes(Paths.get(PATH_TO_INITIAL_BEHAVIOR_PROB))); // ファイルを読み込んで文字列に変換
+            JSONObject jsonObject = new JSONObject(content); // JSON文字列をパース
+            // JSONオブジェクトを走査して Map に格納
+            for (String groupAndDay : jsonObject.keySet()) {
+                JSONObject innerObject = jsonObject.getJSONObject(groupAndDay);
+                HashMap<BehaviorType, Double> activityProb = new HashMap<>();
+                for (String activity : innerObject.keySet()) {
+                    activityProb.put(ACTIVITY_TO_BEHAVIOR_TYPE.get(activity), innerObject.getDouble(activity));
+                }
+                AttributeType attributeType = AttributeType.valueOf(groupAndDay.split("-")[0]);
+                Day.DayType dayType = Day.DayType.valueOf(groupAndDay.split("-")[1]);
+                InitialBehaviorProbs.add(new BehaviorProbByTime(attributeType, dayType,0,0,activityProb));
+            }
+            // 読み込んだデータを表示
+            System.out.println(getBehaviorProbByTime(AttributeType.MALE_20, Day.DayType.MONDAY).getBehaviorByRate());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public static void main1(String[] args) {
         try {
             // 初期化：全ファイルを一度だけ読み込む
             Behavior.initialize();
