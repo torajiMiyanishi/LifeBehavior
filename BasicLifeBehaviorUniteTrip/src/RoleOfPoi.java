@@ -47,7 +47,7 @@ public final class RoleOfPoi extends TRole{
         // 以下の2つの引数は省略可能で，その場合デフォルト値で設定される．
         // 第3引数:この役割が持つルール数 (デフォルト値 10)
         // 第4引数:この役割が持つ子役割数 (デフォルト値 5)
-        super(RoleName.Resident, owner, 0, 0);
+        super(RoleName.Poi, owner, 0, 0);
 
         fName = record[0];
         fGenreCode = String.valueOf(record[1]);
@@ -59,7 +59,20 @@ public final class RoleOfPoi extends TRole{
         for (String behaviorName :record[7].split(",")){
             fBehaviorTypes.add(Behavior.ACTIVITY_TO_BEHAVIOR_TYPE.get(behaviorName.replaceAll(" ","")));
         }
+        MapApp.update(owner); // 自身のpoi情報をマスタに格納する
     }
+    // Getter
+    public String getGenreCode(){
+        return fGenreCode;
+    }
+    public List<Behavior.BehaviorType> getBehaviorTypes(){
+        return fBehaviorTypes;
+    }
+    public List<Behavior.IndustryType> getIndustryTypes(){
+        return fIndustryTypes;
+    }
+
+
     @Override
     public String toString() {
         return "RoleOfPoi{" +

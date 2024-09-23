@@ -9,4 +9,8 @@ public enum RoleName {
     Resident,
     /** 人間役割 */
     Person,
+    /** poi役割 */
+    Poi,
+    /** 移動者役割 */
+    Tripper,
 }

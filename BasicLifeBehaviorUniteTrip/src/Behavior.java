@@ -22,6 +22,7 @@ public class Behavior {
     public static final Map<String, BehaviorType> ACTIVITY_TO_BEHAVIOR_TYPE = new HashMap<>();
     public static final Map<Integer, IndustryType> INDUSTRY_ID_TO_INDUSTRY_TYPE = new HashMap<>();
     public static final Map<BehaviorType, LocationDependency> BEHAVIOR_LOCATION_LABEL = new HashMap<>();
+    public static final Map<Integer,Double> DISTANCE_WALK_RATE = new HashMap<>();
     /** ラベル表現の定義 */
     public enum LocationDependency {// 行為が場所に依存しているか？ enum の定義
         LOCATION_DEPENDENT,  // 特定の場所に依存する
@@ -159,7 +160,15 @@ public class Behavior {
         INDUSTRY_ID_TO_INDUSTRY_TYPE.put(190, IndustryType.S_GOVERNMENT);
         INDUSTRY_ID_TO_INDUSTRY_TYPE.put(200, IndustryType.T_UNCLASSIFIABLE_INDUSTRY);
 
-    }
+        // 距離による徒歩分担率の辞書定義
+        DISTANCE_WALK_RATE.put(0,0.642157);
+        DISTANCE_WALK_RATE.put(100,0.366667);
+        DISTANCE_WALK_RATE.put(200,0.179206);
+        DISTANCE_WALK_RATE.put(300,0.091667);
+        DISTANCE_WALK_RATE.put(400,0.071795);
+        DISTANCE_WALK_RATE.put(500,0.022045);
+        DISTANCE_WALK_RATE.put(1000,0.0);
+    };
 
     /** マスタ定義のヘルパー関数 */
     public static AttributeType generateAttributeType(int age, String gender){
