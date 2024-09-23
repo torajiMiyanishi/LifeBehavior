@@ -7,8 +7,8 @@ public enum SpotType {
     Home,
     /** 外出先 */
     VisitedLocation,
-    /** 日中の活動場所 */
-    WorkPlace,
+    /** 目的候補地 */
+    Poi,
     /** 途中 */
     SpotOnTheWay,
     /** レイヤのテスト用 */

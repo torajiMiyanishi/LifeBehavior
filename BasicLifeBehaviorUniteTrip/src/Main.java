@@ -4,6 +4,9 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Stream;
 
+import com.opencsv.CSVReader;
+import com.opencsv.exceptions.CsvException;
+
 import jp.soars.core.TAgent;
 import jp.soars.core.TAgentManager;
 import jp.soars.core.TRuleExecutor;
@@ -73,7 +76,7 @@ public class Main {
         // gisデータ類のパス
         String dirToInput = "C:\\Users\\tora2\\IdeaProjects\\LifeBehavior\\";
         String pathOfPopulationDataFile = dirToInput + "input/2015_003_8_47207_ok_10.csv"; //合成人口データファイル
-        String pathOfWorkPlaces = dirToInput + "input/ishigaki_building.csv"; //日中の活動場所の建物座標データファイル
+        String pathToPoi = "Z:\\lab\\zenrin_poi\\modified\\47207.csv"; //日中の活動場所の建物座標データファイル
         String pathToPbf = dirToInput + "input/Ishigakishi.osm.pbf"; //OpenStreetMap用のPBFファイル
         String dirToGtfs = dirToInput + "input"; //石垣市のGTFSファイルが格納されているディレクトリ
 
@@ -125,26 +128,26 @@ public class Main {
             new TRoleOfGisSpot(h, lat, lon); //GISスポットロールを生成して自宅スポットに登録
         }
         // 日中の活動場所スポットの作成
-        List<String> rows = new ArrayList<>();
-        try (Stream<String> lines = Files.lines(Paths.get(pathOfWorkPlaces))) {
-            lines.skip(1).forEach(line -> {
-                        rows.add(line);
-                    }
-            );
+        List<String[]> records = new ArrayList<>();
+        try (CSVReader reader = new CSVReader(new FileReader(pathToPoi))) {
+            records = reader.readAll();
+            records = records.subList(1,records.size()); // skip header
+        } catch (IOException | CsvException e) {
+            e.printStackTrace();
         }
-        int noOfWorkPlaces = rows.size();
-        List<TSpot> workPlaces = spotManager.createSpots(SpotType.WorkPlace, noOfWorkPlaces, Layer.Geospatial); //活動場所スポットの生成
-        for (int i = 0; i < noOfWorkPlaces; ++i) {
-            TSpot c = workPlaces.get(i);
-            String row = rows.get(i);
-            String[] values = row.split(",");
-            double lat = Double.parseDouble(values[2]); //緯度
-            double lon = Double.parseDouble(values[3]); //経度
-            new TRoleOfGisSpot(c, lat, lon); //GISスポットロールを生成して活動場所スポットに登録
+        int noOfPois = records.size();
+        List<TSpot> pois = spotManager.createSpots(SpotType.Poi, noOfPois, Layer.Geospatial); //活動場所スポットの生成
+        for (int i = 0; i < noOfPois; ++i) {
+            TSpot poi = pois.get(i);
+            String[] record = records.get(i);
+            double lat = Double.parseDouble(record[4]); //緯度
+            double lon = Double.parseDouble(record[3]); //経度
+            new TRoleOfGisSpot(poi, lat, lon); //GISスポットロールを生成して活動場所スポットに登録
+            new RoleOfPoi(poi, record); //poiの属性を保持するロール
         }
         // 途中スポットの作成
         TSpotOnTheWayMaker.create(spotManager, homes, SpotType.SpotOnTheWay); //自宅スポットの途中スポット
-        TSpotOnTheWayMaker.create(spotManager, workPlaces, SpotType.SpotOnTheWay); //活動場所スポットの途中スポット
+        TSpotOnTheWayMaker.create(spotManager, pois, SpotType.SpotOnTheWay); //活動場所スポットの途中スポット
         // testのためのスポット
         TSpot testSpot = spotManager.createSpots(SpotType.Test,1,Layer.Test).get(0);
 
@@ -160,7 +163,7 @@ public class Main {
             TSpot home = householdDB.get(householdId).getSpot(); //自宅スポット
             person.initializeCurrentSpot(home); //初期位置を自宅スポットに設定する．
             person.initializeCurrentSpot(testSpot); // テスト用にtestレイヤのスポットを設定．
-            TSpot workPlace = chooseWorkPlace(home, workPlaces, 300.0, random); //活動場所を選ぶ
+            TSpot workPlace = chooseWorkPlace(home, pois, 300.0, random); //活動場所を選ぶ
             //家を出る時刻を7時，帰る時刻を17時とするPerson役割を生成してエージェントに割り当てる．
             new RoleOfPerson(person, home, workPlace, new TTime(7, 0, 0), new TTime(17, 0, 0));
             person.activateRole(jp.soars.modules.gis_otp.role.ERoleName.GisAgent); //GISエージェント役割をアクティブ化

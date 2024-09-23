@@ -33,14 +33,14 @@ public final class RuleOfAgentMoving extends TAgentRule {
     public final void doIt(TTime currentTime, Enum<?> currentStage, TSpotManager spotManager,
                            TAgentManager agentManager, Map<String, Object> globalSharedVariables) {
         // DecideBehaviorにて外出に分類される行為に更新されたら、家の外に移動。その逆も含む。
-        boolean debugFlag = true;
-        RoleOfBehavior behaviorRole = (RoleOfBehavior) getOwnerRole();
-        RoleOfResident residentRole = (RoleOfResident) getAgent().getRole(RoleName.Resident);
-        if (Behavior.BEHAVIOR_LOCATION_LABEL.get(behaviorRole.getCurrentBehavior()) == Behavior.LocationType.OUTDOOR){
-            moveTo(residentRole.getVisitedLocation()); // 外出へ
-        } else {
-            moveTo(residentRole.getHome()); // 自宅へ
-        }
+//        boolean debugFlag = true;
+//        RoleOfBehavior behaviorRole = (RoleOfBehavior) getOwnerRole();
+//        RoleOfResident residentRole = (RoleOfResident) getAgent().getRole(RoleName.Resident);
+//        if (Behavior.BEHAVIOR_LOCATION_LABEL.get(behaviorRole.getCurrentBehavior()) == Behavior.LocationType.OUTDOOR){
+//            moveTo(residentRole.getVisitedLocation()); // 外出へ
+//        } else {
+//            moveTo(residentRole.getHome()); // 自宅へ
+//        }
 
     }
 }
