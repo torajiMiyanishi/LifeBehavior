@@ -40,7 +40,7 @@ public final class RoleOfBehavior extends TRole {
         String genderStr    = (gender_id.equals("0")) ? "MALE" : "FEMALE";
         fAttributeType = Behavior.generateAttributeType(age, genderStr);
         // 現在の行為の生成とセット
-        fCurrentBehavior = Behavior.getBehaviorProbByTime(fAttributeType,Day.getDay(0)).getBehaviorByRate();
+        fCurrentBehavior = Behavior.getBehaviorProbByTime(fAttributeType,Day.getDay(0)).getBehaviorByRate(getRandom());
 
         new RuleOfDecideBehavior(RULE_NAME_OF_DECIDE_BEHAVIOR,this).setStage(Stage.DecideBehavior);
 

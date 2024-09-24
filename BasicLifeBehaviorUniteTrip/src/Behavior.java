@@ -1,3 +1,4 @@
+import jp.soars.utils.random.ICRandom;
 import org.joda.time.Days;
 import org.json.JSONObject;
 import org.json.JSONArray;
@@ -22,12 +23,20 @@ public class Behavior {
     public static final Map<String, BehaviorType> ACTIVITY_TO_BEHAVIOR_TYPE = new HashMap<>();
     public static final Map<Integer, IndustryType> INDUSTRY_ID_TO_INDUSTRY_TYPE = new HashMap<>();
     public static final Map<BehaviorType, LocationDependency> BEHAVIOR_LOCATION_LABEL = new HashMap<>();
+    public static final Map<BehaviorType, LocationDecisionType> BEHAVIOR_LOCATION_DECISION_TYPE = new HashMap<>();
     public static final Map<Integer,Double> DISTANCE_WALK_RATE = new HashMap<>();
     /** ラベル表現の定義 */
     public enum LocationDependency {// 行為が場所に依存しているか？ enum の定義
         LOCATION_DEPENDENT,  // 特定の場所に依存する
         LOCATION_INDEPENDENT, // 特定の場所に依存しない
         BOTH, // 両方の行為が含まれている（例：食事）
+    }
+    public enum LocationDecisionType { // 目的地の決め方による分類
+        HOME_ONLY,      // 自宅でなければ行えない
+        NOT_HOME,       // 自宅では行えない
+        BOTH,           // 自宅内外どちらでも行える
+        TRAVELING,      // 移動する行為 ※ここは後に要修正 2024年9月24日 9:22
+        WORK,           // 仕事のみ産業大分類で決定するため，独自定義
     }
     public enum Gender {// 性別の定義
         MALE, FEMALE // 男性，女性
@@ -78,7 +87,8 @@ public class Behavior {
         Q_COMPOUND_SERVICES,                // Q: 複合サービス事業
         R_OTHER_SERVICES,                   // R: サービス業（他に分類されないもの）
         S_GOVERNMENT,                       // S: 公務（他に分類されるものを除く）
-        T_UNCLASSIFIABLE_INDUSTRY           // T: 分類不能の産業
+        T_UNCLASSIFIABLE_INDUSTRY,          // T: 分類不能の産業
+        NOT_ASSIGNED,                       // -1 割り当てなし
     }
 
 
@@ -117,28 +127,52 @@ public class Behavior {
         }
 
         // BEHAVIOR_TYPE_ORDERING に基づいて「特定の場所に依存するか」を enum の LocationDependency に定義する
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.SLEEP, LocationDependency.LOCATION_DEPENDENT);        // 睡眠は自宅に依存
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.EATING, LocationDependency.BOTH);                     // 食事は場所によらない
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.PERSONAL_CARE, LocationDependency.LOCATION_DEPENDENT); // 身のまわりの用事は自宅に依存
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.MEDICAL_CARE, LocationDependency.LOCATION_DEPENDENT);  // 療養・静養は特定場所に依存
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.WORK, LocationDependency.LOCATION_DEPENDENT);          // 仕事は職場に依存
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.WORK_SOCIALIZING, LocationDependency.LOCATION_DEPENDENT); // 仕事のつきあいは職場に依存
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.SCHOOL_ACTIVITIES, LocationDependency.LOCATION_DEPENDENT); // 学内の活動は学校に依存
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.STUDY_OUTSIDE, LocationDependency.LOCATION_DEPENDENT);    // 学校外の学習は場所に依存
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.HOUSEWORK, LocationDependency.LOCATION_DEPENDENT);       // 家事は自宅に依存
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.SHOPPING, LocationDependency.LOCATION_DEPENDENT);        // 買い物は場所に依存（店舗）
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.CHILDCARE, LocationDependency.LOCATION_DEPENDENT);       // 子どもの世話は場所に依存
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.HOUSEHOLD_TASKS, LocationDependency.LOCATION_DEPENDENT); // 家庭雑事は自宅に依存
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.COMMUTING, LocationDependency.LOCATION_DEPENDENT);       // 通勤は職場に依存
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.SCHOOL_COMMUTING, LocationDependency.LOCATION_DEPENDENT); // 通学は学校に依存
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.SOCIAL_PARTICIPATION, LocationDependency.LOCATION_DEPENDENT); // 社会参加は場所に依存
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.SOCIALIZING, LocationDependency.BOTH);                  // 会話・交際は場所によらない
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.SPORTS, LocationDependency.LOCATION_DEPENDENT);         // スポーツは場所に依存
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.RECREATION, LocationDependency.LOCATION_DEPENDENT);     // 行楽・散策は場所に依存
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.HOBBIES, LocationDependency.BOTH);                      // 趣味・娯楽は場所によらない
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.MEDIA_CONSUMPTION, LocationDependency.LOCATION_INDEPENDENT); // マスメディア接触は場所によらない
-        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.REST, LocationDependency.LOCATION_INDEPENDENT);         // 休息は場所によらない
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.SLEEP, LocationDependency.LOCATION_DEPENDENT);                 // 睡眠
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.EATING, LocationDependency.BOTH);                              // 食事
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.PERSONAL_CARE, LocationDependency.LOCATION_INDEPENDENT);         // 身のまわりの用事
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.MEDICAL_CARE, LocationDependency.LOCATION_DEPENDENT);          // 療養・静養
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.WORK, LocationDependency.LOCATION_DEPENDENT);                  // 仕事
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.WORK_SOCIALIZING, LocationDependency.LOCATION_DEPENDENT);      // 仕事のつきあい
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.SCHOOL_ACTIVITIES, LocationDependency.LOCATION_DEPENDENT);     // 学内の活動
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.STUDY_OUTSIDE, LocationDependency.LOCATION_DEPENDENT);         // 学校外の学習
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.HOUSEWORK, LocationDependency.LOCATION_DEPENDENT);             // 炊事・掃除・洗濯
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.SHOPPING, LocationDependency.LOCATION_DEPENDENT);              // 買い物
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.CHILDCARE, LocationDependency.LOCATION_DEPENDENT);             // 子どもの世話
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.HOUSEHOLD_TASKS, LocationDependency.BOTH);       // 家庭雑事
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.COMMUTING, LocationDependency.LOCATION_DEPENDENT);             // 通勤
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.SCHOOL_COMMUTING, LocationDependency.LOCATION_DEPENDENT);      // 通学
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.SOCIAL_PARTICIPATION, LocationDependency.LOCATION_DEPENDENT);  // 社会参加
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.SOCIALIZING, LocationDependency.LOCATION_INDEPENDENT);                         // 会話・交際
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.SPORTS, LocationDependency.BOTH);                // スポーツ
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.RECREATION, LocationDependency.LOCATION_DEPENDENT);            // 行楽・散策
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.HOBBIES, LocationDependency.LOCATION_INDEPENDENT);                             // 趣味・娯楽
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.MEDIA_CONSUMPTION, LocationDependency.LOCATION_INDEPENDENT);   // マスメディア接触
+        BEHAVIOR_LOCATION_LABEL.put(BehaviorType.REST, LocationDependency.LOCATION_INDEPENDENT);                // 休息
 
+        // LocationDecisionTypeのマスタ
+        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.SLEEP, LocationDecisionType.HOME_ONLY);                 // 睡眠
+        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.EATING, LocationDecisionType.BOTH);                              // 食事
+//        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.PERSONAL_CARE, );         // 身のまわりの用事
+        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.MEDICAL_CARE, LocationDecisionType.BOTH);          // 療養・静養
+        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.WORK, LocationDecisionType.WORK);                  // 仕事
+        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.WORK_SOCIALIZING, LocationDecisionType.NOT_HOME);      // 仕事のつきあい
+        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.SCHOOL_ACTIVITIES, LocationDecisionType.NOT_HOME);     // 学内の活動
+        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.STUDY_OUTSIDE, LocationDecisionType.BOTH);         // 学校外の学習
+        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.HOUSEWORK, LocationDecisionType.HOME_ONLY);             // 炊事・掃除・洗濯
+        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.SHOPPING, LocationDecisionType.BOTH);              // 買い物
+        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.CHILDCARE, LocationDecisionType.BOTH);             // 子どもの世話
+        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.HOUSEHOLD_TASKS, LocationDecisionType.BOTH);       // 家庭雑事
+        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.COMMUTING, LocationDecisionType.TRAVELING);             // 通勤
+        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.SCHOOL_COMMUTING, LocationDecisionType.TRAVELING);      // 通学
+        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.SOCIAL_PARTICIPATION, LocationDecisionType.NOT_HOME);  // 社会参加
+//        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.SOCIALIZING, );                         // 会話・交際
+        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.SPORTS, LocationDecisionType.BOTH);                // スポーツ
+        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.RECREATION, LocationDecisionType.NOT_HOME);            // 行楽・散策
+//        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.HOBBIES, );                             // 趣味・娯楽
+//        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.MEDIA_CONSUMPTION, );   // マスメディア接触
+//        BEHAVIOR_LOCATION_DECISION_TYPE.put(BehaviorType.REST, );                // 休息
+
+        // 模擬個票の産業大分類コードと，このプログラム内でのenumのマスタ
         INDUSTRY_ID_TO_INDUSTRY_TYPE.put(10, IndustryType.A_AGRICULTURE_FORESTRY);
         INDUSTRY_ID_TO_INDUSTRY_TYPE.put(20, IndustryType.B_FISHERIES);
         INDUSTRY_ID_TO_INDUSTRY_TYPE.put(30, IndustryType.C_MINING_QUARRYING_GRAVEL);
@@ -159,6 +193,7 @@ public class Behavior {
         INDUSTRY_ID_TO_INDUSTRY_TYPE.put(180, IndustryType.R_OTHER_SERVICES);
         INDUSTRY_ID_TO_INDUSTRY_TYPE.put(190, IndustryType.S_GOVERNMENT);
         INDUSTRY_ID_TO_INDUSTRY_TYPE.put(200, IndustryType.T_UNCLASSIFIABLE_INDUSTRY);
+        INDUSTRY_ID_TO_INDUSTRY_TYPE.put(-1, IndustryType.NOT_ASSIGNED);
 
         // 距離による徒歩分担率の辞書定義
         DISTANCE_WALK_RATE.put(0,0.642157);
@@ -318,7 +353,7 @@ public class Behavior {
         public HashMap<BehaviorType, Double> getProbs(){
             return probs;
         }
-        public BehaviorType getBehaviorByRate() {
+        public BehaviorType getBehaviorByRate(ICRandom random) {
             // まず、全ての確率を加算して総和を計算
             double sum = 0.0;
             for (double probability : probs.values()) {
@@ -326,8 +361,7 @@ public class Behavior {
             }
 
             // 0 から sum の範囲で乱数を生成
-            Random rand = new Random();
-            double randomValue = rand.nextDouble() * sum;
+            double randomValue = random.nextDouble() * sum;
 
             // 累積確率を計算して選択する
             double cumulativeProbability = 0.0;
@@ -354,8 +388,8 @@ public class Behavior {
                 return probData;
             }
         }
-        System.out.println("データが存在しないエラー @Behavior.java");
-        System.out.println("AttributeType "+ attributeType + ", Day.DayType " + dayType);
+//        System.out.println("データが存在しないエラー @Behavior.java");
+//        System.out.println("AttributeType "+ attributeType + ", Day.DayType " + dayType);
         return null;
     }
 
@@ -395,13 +429,14 @@ public class Behavior {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        System.out.println("Behavior is Initialized");
+//        System.out.println("Behavior is Initialized");
     }
 
 
     /** 行為決定のメソッド */
     // 指定された属性，時刻，曜日の遷移する行動を確率的に算出するメソッド
-    public static Behavior.BehaviorType getNextBehavior(AttributeType attributeType, BehaviorType currentBehavior, int current_h, int current_m, Day.DayType currentDay){
+    public static Behavior.BehaviorType getNextBehavior(AttributeType attributeType, BehaviorType currentBehavior,
+                                                        int current_h, int current_m, Day.DayType currentDay, ICRandom random){
         double[] probabilities = AlltransitionDataMap.get(attributeType).getTransitionProbabilities(
                 Behavior.BEHAVIOR_TYPE_ORDERING.indexOf(currentBehavior),Day.getTimeTick(current_h,current_m),currentDay);
         // ルーレット選択を行う
@@ -411,8 +446,7 @@ public class Behavior {
             sum += probability;
         }
         // 0からsumの範囲で乱数を生成
-        Random rand = new Random();
-        double randomValue = rand.nextDouble() * sum;
+        double randomValue = random.nextDouble() * sum;
         // 累積確率を計算して選択する
         Behavior.BehaviorType selectedBehavior = null;
         double cumulativeProbability = 0.0;
@@ -430,45 +464,5 @@ public class Behavior {
 
 
     /** 以下テスト */
-    public static void main(String[] args) {
-        try {
-            String content = new String(Files.readAllBytes(Paths.get(PATH_TO_INITIAL_BEHAVIOR_PROB))); // ファイルを読み込んで文字列に変換
-            JSONObject jsonObject = new JSONObject(content); // JSON文字列をパース
-            // JSONオブジェクトを走査して Map に格納
-            for (String groupAndDay : jsonObject.keySet()) {
-                JSONObject innerObject = jsonObject.getJSONObject(groupAndDay);
-                HashMap<BehaviorType, Double> activityProb = new HashMap<>();
-                for (String activity : innerObject.keySet()) {
-                    activityProb.put(ACTIVITY_TO_BEHAVIOR_TYPE.get(activity), innerObject.getDouble(activity));
-                }
-                AttributeType attributeType = AttributeType.valueOf(groupAndDay.split("-")[0]);
-                Day.DayType dayType = Day.DayType.valueOf(groupAndDay.split("-")[1]);
-                InitialBehaviorProbs.add(new BehaviorProbByTime(attributeType, dayType,0,0,activityProb));
-            }
-            // 読み込んだデータを表示
-            System.out.println(getBehaviorProbByTime(AttributeType.MALE_20, Day.DayType.MONDAY).getBehaviorByRate());
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-
-    public static void main1(String[] args) {
-        try {
-            // 初期化：全ファイルを一度だけ読み込む
-            Behavior.initialize();
-
-            // 属性に基づいてTransitionProbabilityDataを取得
-
-            // 現在の行為nと時刻tから、遷移確率を取得する
-            BehaviorType currentActivity = BehaviorType.SLEEP;
-            AttributeType attributeType = AttributeType.FEMALE_20;
-            BehaviorType nextBehavior = getNextBehavior(attributeType, currentActivity, 2, 0, Day.DayType.MONDAY);
-
-            System.out.println("Next behavior is "+ nextBehavior);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 }

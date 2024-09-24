@@ -50,12 +50,12 @@ public class Main {
         //   - spotTypes:使用するスポットタイプ集合
         // *************************************************************************************************************
         long startTime = System.currentTimeMillis(); //実験開始時刻
-        String simulationStart = "0/00:00:00";
-        String simulationEnd = "0/01:00:00";
-        String tick = "0:01:00";
-        String behaviorTick = "0:05:00"; // 行為決定のティック
+        String simulationStart  = "0/00:00:00";
+        String simulationEnd    = "1/00:00:00";
+        String tick                = "0:01:00";
+        String behaviorTick        = "0:05:00"; // 行為決定のティック
         long seed = 10400L; // マスターシード値
-        List<Enum<?>> stages = List.of(Stage.Deactivate,Stage.DecideBehavior, EStage.AgentPlanning, EStage.AgentMoving, Stage.Deactivate);
+        List<Enum<?>> stages = List.of(Stage.DecideBehavior, EStage.AgentPlanning, EStage.AgentMoving, Stage.Deactivate);
         Set<Enum<?>> layers = new HashSet<>();
         Collections.addAll(layers, Layer.values());
         Layer defaultLayer = Layer.Geospatial;
@@ -162,18 +162,13 @@ public class Main {
             new TRoleOfSyntheticPopulationData(person, spd); //合成人口役割を生成してエージェントに割り当てる
             int householdId = spd.getHouseholdId(); //世帯ID
             TSpot home = householdDB.get(householdId).getSpot(); //自宅スポット
+            new RoleOfResident(person,home); // 住民役割
+            person.activateRole(RoleName.Resident);
             person.initializeCurrentSpot(home); //初期位置を自宅スポットに設定する．
             person.initializeCurrentSpot(testSpot); // テスト用にtestレイヤのスポットを設定．
-            TSpot workPlace = chooseWorkPlace(home, pois, 300.0, random); //活動場所を選ぶ
-            //家を出る時刻を7時，帰る時刻を17時とするPerson役割を生成してエージェントに割り当てる．
-//            new RoleOfPerson(person, home, workPlace, new TTime(7, 0, 0), new TTime(17, 0, 0));
-            RoleOfTripper tripperRole = new RoleOfTripper(person,ruleExecutor.getCurrentTime()); // 動的な予約ロールのテスト
+//            TSpot workPlace = chooseWorkPlace(home, pois, 300.0, random); //活動場所を選ぶ
+            new RoleOfTripper(person,ruleExecutor.getCurrentTime()); // 動的な移動計画
             person.activateRole(jp.soars.modules.gis_otp.role.ERoleName.GisAgent); //GISエージェント役割をアクティブ化
-            person.activateRole(RoleName.Tripper); //Person役割をアクティブ化
-
-            tripperRole.reservePlanning(person.getCurrentSpot(),pois);
-
-
 
 
             /** gis-otp-moduleとマルコフ連鎖生活行動モデルの結合 */
@@ -253,7 +248,14 @@ public class Main {
         // 実行された場合:true，実行されなかった(終了時刻)場合は:falseが帰ってくるため，while文で回すことができる．
         while (ruleExecutor.executeStep()) {
             // 標準出力に現在時刻を表示する
-            System.out.println(ruleExecutor.getCurrentTime() +" "+ persons.get(0).toString());
+            List<String> strings = new ArrayList<>();
+//            for (TAgent person:persons){
+//                RoleOfBehavior behaviorRole = (RoleOfBehavior) person.getRole(RoleName.Behavior);
+//
+//                strings.add(person.getCurrentSpot().getName()+":"+ behaviorRole.getCurrentBehavior()+":"+person.getRole(RoleName.Tripper).isActive());
+//            }
+//            System.out.println(ruleExecutor.getCurrentTime() + String.join("   ",strings)); // +" "+ persons.get(0).toString());
+            System.out.println(ruleExecutor.getCurrentTime());
             writeSpotLog(spotLogPW, ruleExecutor.getCurrentTime(), persons); //スポットログの出力
 
             // 行為ログ出力

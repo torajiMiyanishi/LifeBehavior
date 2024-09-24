@@ -14,16 +14,12 @@ public final class RoleOfResident extends TRole {
     /** 自宅 */
     private final TSpot fHome;
 
-    /** 会社 */
-    private final TSpot fVisitedLocation;
-
     /**
      * コンストラクタ
      * @param owner この役割を持つエージェント
      * @param home 自宅
-     * @param visitedLocation 会社
      */
-    public RoleOfResident(TAgent owner, TSpot home, TSpot visitedLocation) {
+    public RoleOfResident(TAgent owner, TSpot home) {
         // 親クラスのコンストラクタを呼び出す．
         // 以下の2つの引数は省略可能で，その場合デフォルト値で設定される．
         // 第3引数:この役割が持つルール数 (デフォルト値 10)
@@ -31,13 +27,9 @@ public final class RoleOfResident extends TRole {
         super(RoleName.Resident, owner, 0, 0);
 
         fHome = home;
-        fVisitedLocation = visitedLocation;
     }
 
     public TSpot getHome(){
         return fHome;
-    }
-    public TSpot getVisitedLocation(){
-        return fVisitedLocation;
     }
 }

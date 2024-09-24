@@ -32,7 +32,7 @@ public final class RuleOfDeactivate extends TAgentRule {
     @Override
     public final void doIt(TTime currentTime, Enum<?> currentStage, TSpotManager spotManager,
                            TAgentManager agentManager, Map<String, Object> globalSharedVariables) {
-//        ((RoleOfTripper) getOwnerRole()).setIsTraveling(false);
+//        System.out.println("deactivate が発火しました　@RuleOfDeactivate");
         getAgent().deactivateRole(RoleName.Tripper);
     }
 }
