@@ -17,10 +17,13 @@ import java.util.*;
 public class RoleOfTripper extends TRole implements IRoleOfPlanning {
 
     /** 計画をするルール */
-    public static final String RULE_NAME_OF_PLANNING = "Plan";
+    public static final String RULE_NAME_OF_PLANNING = "Planing";
 
     /** 移動行動が終了したら，フラグを操作する */
     public static final String RULE_NAME_OF_DEACTIVATE = "Deactivate";
+
+    /** ルール名重複を回避する変数 */
+    public static int ruleNo = 0;
 
 
     /** TRoleOfGisAgentの役割名 */
@@ -55,14 +58,16 @@ public class RoleOfTripper extends TRole implements IRoleOfPlanning {
     public void reservePlanning(TSpot originSpot, List<TSpot> candidatePois){
         fOriginSpot = originSpot;
         fPrioritizedPois = prioritizeCandidates(candidatePois); // poiを評価して優先順位付け
+        ruleNo++ ;
 
-//        if (getRule(RULE_NAME_OF_PLANNING) == null && !getOwner().getRole(RoleName.Tripper).isActive()){
-        if (!getOwner().getRole(RoleName.Tripper).isActive()){
+
+        if (getRule(RULE_NAME_OF_PLANNING + ruleNo) == null && !getOwner().getRole(RoleName.Tripper).isActive()){
+//        if (!getOwner().getRole(RoleName.Tripper).isActive()){
                 getOwner().activateRole(RoleName.Tripper);
-                TRuleOfPlanning planning = new TRuleOfPlanning(RULE_NAME_OF_PLANNING, getOwner().getRole(RoleName.Tripper));
+                TRuleOfPlanning planning = new TRuleOfPlanning(RULE_NAME_OF_PLANNING + ruleNo, getOwner().getRole(RoleName.Tripper));
                 planning.setTimeAndStage(fCurrentTime.getDay(), fCurrentTime.getHour(), fCurrentTime.getMinute(), 0, EStage.AgentPlanning); //叩かれたその時に計画
         } else {
-            if (getRule(RULE_NAME_OF_PLANNING) != null) {
+            if (getRule(RULE_NAME_OF_PLANNING + ruleNo) != null) {
                 System.err.println("Try to reserve the duplicated rule @RoleOfTripper");
             } else if (getOwner().getRole(RoleName.Tripper).isActive()) {
                 System.err.println("既にTripperRoleはアクティブになっています． @RoleOfTripper");
@@ -99,11 +104,12 @@ public class RoleOfTripper extends TRole implements IRoleOfPlanning {
         for (TSpot poiSpot: fPrioritizedPois){
             ti = rga.findRoute(hour, minute, arriveBy, traverseModeSet, ((TAgent) getOwner()).getCurrentSpot(), poiSpot); //経路検索
             if (ti != null) { //経路が見つかったら
-                break;
+                if (ti.getSearchStatus() == EOtpStatus.SUCCESS) // tripが成功するならば
+                    break;
             }
         }
-        RuleOfDeactivate deactivateRule = new RuleOfDeactivate(RULE_NAME_OF_DEACTIVATE, this);
-        if (ti != null){
+        RuleOfDeactivate deactivateRule = new RuleOfDeactivate(RULE_NAME_OF_DEACTIVATE + ruleNo, this);
+        if (ti != null && ti.getSearchStatus() == EOtpStatus.SUCCESS){ // 経路が存在し，tripとして成立しているの出れば
             rga.scheduleToMove(currentTime.getDay(), ti); // 移動をスケジュール
 //            System.out.println("DD:"+ti.getEndDay()+", HH:"+ti.getEndHour()+", MM:"+ti.getEndMinute()+" @RoleOfTripper");
             deactivateRule.setTimeAndStage(ti.getEndDay(),ti.getEndHour(),ti.getEndMinute(),0,Stage.Deactivate);//旅行計画が正常にスケジュールされた場合は，trip終了時刻に不活性化

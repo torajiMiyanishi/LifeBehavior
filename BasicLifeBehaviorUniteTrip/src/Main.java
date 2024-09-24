@@ -74,7 +74,8 @@ public class Main {
 //        builder.setRandomSeed(seed);
 
         // gisデータ類のパス
-        String dirToInput = "C:\\Users\\tora2\\IdeaProjects\\LifeBehavior\\";
+//        String dirToInput = "C:\\Users\\tora2\\IdeaProjects\\LifeBehavior\\";
+        String dirToInput = "Z:\\lab\\";
         String pathOfPopulationDataFile = dirToInput + "input/2015_003_8_47207_ok_10.csv"; //合成人口データファイル
         String pathToPoi = "Z:\\lab\\zenrin_poi\\modified\\47207.csv"; //日中の活動場所の建物座標データファイル
         String pathToPbf = dirToInput + "input/Ishigakishi.osm.pbf"; //OpenStreetMap用のPBFファイル
@@ -82,6 +83,7 @@ public class Main {
 
         // ルールログとランタイムログの出力設定
         String pathOfLogDir = "C:\\Users\\tora2\\IdeaProjects\\LifeBehavior\\logs";
+//        String pathOfLogDir = "Z:\\lab\\output\\logs";
         builder.setRuleLoggingEnabled(pathOfLogDir + File.separator + "rule_log.csv");
         builder.setRuntimeLoggingEnabled(pathOfLogDir + File.separator + "runtime_log.csv");
         String personTripLog = "person_trips"; //移動ログ
