@@ -1,12 +1,12 @@
 public class Day{
     public enum DayType {
-        SUNDAY,
         MONDAY,
         TUESDAY,
         WEDNESDAY,
         THURSDAY,
         FRIDAY,
         SATURDAY,
+        SUNDAY,
     }
 
     // 指定された int 値に基づいて曜日を返すメソッド
@@ -26,6 +26,14 @@ public class Day{
         int minuteTick = mm / 15;
         return hh * 4 + minuteTick;
     }
+
+    // NTT mobile空間統計用． int h,int mを HHMMに変換する
+    public static String formatTime(int hour, int minute) {
+        // 2桁表示を保証するために String.format を使用して 0 埋めを行う
+        return String.format("%02d%02d", hour, minute);
+    }
+
+
 }
 
 

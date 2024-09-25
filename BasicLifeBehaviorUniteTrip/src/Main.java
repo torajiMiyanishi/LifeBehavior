@@ -18,20 +18,20 @@ import jp.soars.core.enums.ERuleDebugMode;
 
 import jp.soars.modules.gis_otp.logger.TPersonTripLogger;
 import jp.soars.modules.gis_otp.otp.TThreadLocalOfOtpRouter;
-import jp.soars.modules.gis_otp.role.EStage;
-import jp.soars.modules.gis_otp.role.TRoleOfGisAgent;
-import jp.soars.modules.gis_otp.role.TRoleOfGisSpot;
-import jp.soars.modules.gis_otp.role.TSpotOnTheWayMaker;
+import jp.soars.modules.gis_otp.role.*;
 
 import jp.soars.modules.gis_otp.sample.TRoleOfPerson;
 import jp.soars.modules.synthetic_population.TRoleOfSyntheticPopulationData;
 import jp.soars.modules.synthetic_population.TSyntheticPopulationData;
 import jp.soars.modules.synthetic_population.TSyntheticPopulationData.THousehold;
+import jp.soars.modules.synthetic_population.ERoleName;
 
 import jp.soars.utils.csv.TCCsvData;
 import jp.soars.utils.random.ICRandom;
 
 import org.opentripplanner.common.geometry.SphericalDistanceLibrary;
+
+import javax.management.relation.Role;
 
 /**
  * メインクラス
@@ -55,7 +55,7 @@ public class Main {
         String tick                = "0:01:00";
         String behaviorTick        = "0:05:00"; // 行為決定のティック
         long seed = 10400L; // マスターシード値
-        List<Enum<?>> stages = List.of(Stage.DecideBehavior, EStage.AgentPlanning, EStage.AgentMoving, Stage.Deactivate);
+        List<Enum<?>> stages = List.of(Stage.DecideBehavior, EStage.AgentPlanning, EStage.AgentMoving, Stage.Deactivate, Stage.LocationFetching);
         Set<Enum<?>> layers = new HashSet<>();
         Collections.addAll(layers, Layer.values());
         Layer defaultLayer = Layer.Geospatial;
@@ -76,7 +76,8 @@ public class Main {
         // gisデータ類のパス
 //        String dirToInput = "C:\\Users\\tora2\\IdeaProjects\\LifeBehavior\\";
         String dirToInput = "Z:\\lab\\";
-        String pathOfPopulationDataFile = dirToInput + "input/2015_003_8_47207_ok_10.csv"; //合成人口データファイル
+        String pathOfPopulationDataFile = dirToInput + "input/2015_003_8_47207_ok_100.csv"; //合成人口データファイル
+//        String pathOfPopulationDataFile = "C:\\Users\\tora2\\IdeaProjects\\LifeBehavior\\input\\2015_003_8_47207_ok_10.csv";
         String pathToPoi = "Z:\\lab\\zenrin_poi\\modified\\47207.csv"; //日中の活動場所の建物座標データファイル
         String pathToPbf = dirToInput + "input/Ishigakishi.osm.pbf"; //OpenStreetMap用のPBFファイル
         String dirToGtfs = dirToInput + "input"; //石垣市のGTFSファイルが格納されているディレクトリ
@@ -88,6 +89,8 @@ public class Main {
         builder.setRuntimeLoggingEnabled(pathOfLogDir + File.separator + "runtime_log.csv");
         String personTripLog = "person_trips"; //移動ログ
         String spotLog = "spot_log.csv"; //スポットログ
+        String behaviorLog = "behavior_log.csv"; // 行為ログ
+        String locationLog = "location_log.csv"; // 位置情報（緯度経度）のログ
 
         // ルールログのデバッグ情報出力設定
         builder.setRuleDebugMode(ERuleDebugMode.LOCAL);
@@ -178,68 +181,20 @@ public class Main {
             person.activateRole(RoleName.Behavior); // 行為者役割をアクティブ化
         }
 
-
-
-
-
-
-//        String csvAgentInfo = "Z:\\lab\\lifebehavior\\agent_1000.csv";
-//        List<String> rows = new ArrayList<>();
-//        try (Stream<String> lines = Files.lines(Paths.get(csvAgentInfo))) {
-//            lines.skip(1).forEach(line -> {
-//                rows.add(line);
-//                    }
-//            );
-//        }
-//
-//        List<TSpot> homes = spotManager.createSpots(SpotType.Home, rows.size());
-//        TSpot visitedLocation = spotManager.createSpot(SpotType.VisitedLocation);
-//        List<TAgent> humans = agentManager.createAgents(AgentType.Human, rows.size());
-//        for (int i=0; i<rows.size(); i++) {
-//            String row = rows.get(i);
-//            String[] values = row.split(",");
-//            int age = Integer.parseInt(values[0].trim());
-//            Behavior.Gender gender = Behavior.Gender.valueOf(values[1].trim());
-//            Behavior.BehaviorType currentBehavior = Behavior.ACTIVITY_TO_BEHAVIOR_TYPE.get(values[2].trim());
-//
-//
-//            TAgent human = humans.get(i); // i番目の人間エージェント
-//            TSpot home = homes.get(i); // i番目の人間エージェントの自宅
-//            human.initializeCurrentSpot(home); // 初期スポットを自宅に設定
-//            new RoleOfHuman(human, age, gender); // 人間役割を作成
-//            human.activateRole(RoleName.Human); // 人間役割をアクティブ化
-//            new RoleOfResident(human, home, visitedLocation); // 住民役割を作成
-//            human.activateRole(RoleName.Resident); // 住民役割をアクティブ化
-//            new RoleOfBehavior(human, currentBehavior); // 行為者役割を作成
-//            human.activateRole(RoleName.Behavior); // 行為者役割をアクティブ化
-//        }
-
         // *************************************************************************************************************
         // 独自に作成するログ用のPrintWriter
         //   - スポットログ:各時刻での各エージェントの現在位置ログ
         // *************************************************************************************************************
+        // print writerを作り，カラムを出力
+        PrintWriter behaviorLogPW = new PrintWriter(pathOfLogDir + File.separator + behaviorLog);// 行為ログ用PrintWriter
+        writePivotColumns(behaviorLogPW,persons);
+        PrintWriter spotLogPW = new PrintWriter(pathOfLogDir + File.separator + spotLog); // スポットログ
+        writePivotColumns(spotLogPW,persons);
+        PrintWriter locationPW = new PrintWriter(pathOfLogDir + File.separator + locationLog); // 位置情報ログ
+        writeLocationLogColumns(locationPW);
 
-//        // スポットログ用PrintWriter
-//        PrintWriter spotLogPW = new PrintWriter(new BufferedWriter(new FileWriter(pathOfLogDir + File.separator + "spot_log.csv")));
-//        // スポットログのカラム名出力
-//        spotLogPW.print("CurrentTime");
-//        for (TAgent person : persons) {
-//            spotLogPW.print(',');
-//            spotLogPW.print(person.getName());
-//        }
-//        spotLogPW.println();
 
-        // 行為ログ用PrintWriter
-        PrintWriter behaviorLogPW = new PrintWriter(new BufferedWriter(new FileWriter(pathOfLogDir + File.separator + "behavior_log.csv")));
-        // 行為ログのカラム名出力
-        behaviorLogPW.print("CurrentTime,CurrentDay");
-        for (TAgent person : persons) {
-            behaviorLogPW.print(',');
-            behaviorLogPW.print(person.getName());
-        }
-        behaviorLogPW.println();
-
-        PrintWriter spotLogPW = openSpotLog(pathOfLogDir + File.separator + spotLog, persons); //スポットログをオープン
+        // git-otp-moduleの設定
         TPersonTripLogger.open(pathOfLogDir, personTripLog); //移動ログをオープン
         TThreadLocalOfOtpRouter.initialize(pathToPbf, dirToGtfs); //OTPルータの初期化
         // *************************************************************************************************************
@@ -249,37 +204,19 @@ public class Main {
         // 1ステップ分のルールを実行 (ruleExecutor.executeStage()で1ステージ毎に実行することもできる)
         // 実行された場合:true，実行されなかった(終了時刻)場合は:falseが帰ってくるため，while文で回すことができる．
         while (ruleExecutor.executeStep()) {
-            // 標準出力に現在時刻を表示する
-            List<String> strings = new ArrayList<>();
-//            for (TAgent person:persons){
-//                RoleOfBehavior behaviorRole = (RoleOfBehavior) person.getRole(RoleName.Behavior);
-//
-//                strings.add(person.getCurrentSpot().getName()+":"+ behaviorRole.getCurrentBehavior()+":"+person.getRole(RoleName.Tripper).isActive());
-//            }
-//            System.out.println(ruleExecutor.getCurrentTime() + String.join("   ",strings)); // +" "+ persons.get(0).toString());
+            /** 標準出力 */
             System.out.println(ruleExecutor.getCurrentTime());
-            writeSpotLog(spotLogPW, ruleExecutor.getCurrentTime(), persons); //スポットログの出力
 
+            /** ログの出力 */
+            //スポットログの出力
+            writeSpotLog(spotLogPW, ruleExecutor.getCurrentTime(), persons);
             // 行為ログ出力
-            behaviorLogPW.print(ruleExecutor.getCurrentTime());
-            behaviorLogPW.print(',');
-            behaviorLogPW.print(Day.getDay(ruleExecutor.getCurrentTime().getDay()));
-            for (TAgent person : persons) {
-                behaviorLogPW.print(',');
-                RoleOfBehavior behaviorRole = (RoleOfBehavior) person.getRole(RoleName.Behavior);
-                behaviorLogPW.print(behaviorRole.getCurrentBehavior());
-            }
-            behaviorLogPW.println();
+            writeBehaviorLog(behaviorLogPW,ruleExecutor.getCurrentTime(),persons);
+            // 位置情報ログ
+            if (ruleExecutor.getCurrentTime().getMinute()%15 == 0){ // 位置情報は15分に一度書き出す．
 
-//            // スポットログ出力
-//            spotLogPW.print(ruleExecutor.getCurrentTime());
-//            spotLogPW.print(',');
-//            spotLogPW.print(Day.getDay(ruleExecutor.getCurrentTime().getDay()));
-//            for (TAgent person : persons) {
-//                spotLogPW.print(',');
-//                spotLogPW.print(person.getCurrentSpotName());
-//            }
-//            spotLogPW.println();
+            }
+
         }
 
         // *************************************************************************************************************
@@ -346,35 +283,94 @@ public class Main {
         return workPlace;
     }
 
-    /**
-     * スポットログをオープンする
-     * @param path スポットログのパス
-     * @param persons エージェントのリスト
-     * @return 出力ストリーム
-     * @throws FileNotFoundException
-     */
-    private static PrintWriter openSpotLog(String path, List<TAgent> persons) throws FileNotFoundException {
-        PrintWriter spotLogPW = new PrintWriter(path); //スポットログ
-        // スポットログのヘッダのカラム名出力
-        spotLogPW.print("CurrentTime");
-        for (TAgent agent : persons) {
-            spotLogPW.print("," + agent.getName());
-        }
-        spotLogPW.println();
-        return spotLogPW;
-    }
 
     /**
      * スポットログを出力する．
-     * @param spotLogPW 出力ストリーム
+     * @param pw 出力ストリーム
      * @param currentTime 現在時刻
      * @param persons エージェントのリスト
      */
-    private static void writeSpotLog(PrintWriter spotLogPW, TTime currentTime, List<TAgent> persons) {
-        spotLogPW.print(currentTime); // スポットログ出力
-        for (TAgent a : persons) {
-            spotLogPW.print("," + a.getCurrentSpotName());
+    private static void writeSpotLog(PrintWriter pw, TTime currentTime, List<TAgent> persons) {
+        pw.print(currentTime); // 現在時刻
+        pw.print(","+Day.getDay(currentTime.getDay()));
+        for (TAgent person : persons) {
+            pw.print("," + person.getCurrentSpotName());
         }
-        spotLogPW.println();
+        pw.println();
+        pw.flush();
+    }
+    /**
+     * 行為ログを出力する
+     * @param pw 出力ストリーム
+     * @param currentTime 現在時刻
+     * @param persons エージェントのリスト
+     */
+    private static void writeBehaviorLog(PrintWriter pw, TTime currentTime, List<TAgent> persons) {
+        pw.print(currentTime); // 現在時刻
+        pw.print(","+Day.getDay(currentTime.getDay()));
+        for (TAgent person : persons) {
+            RoleOfBehavior behaviorRole = (RoleOfBehavior) person.getRole(RoleName.Behavior);
+            pw.print("," + behaviorRole.getCurrentBehavior());
+        }
+        pw.println();
+        pw.flush();
+    }
+
+    /**
+     * エージェント分の横持ちカラムを記述する
+     * @param logPW
+     * @param persons
+     */
+    private static void writePivotColumns(PrintWriter logPW, List<TAgent> persons){
+        logPW.print("CurrentTime,CurrentDay");
+        for (TAgent person : persons) {
+            logPW.print(',');
+            logPW.print(person.getName());
+        }
+        logPW.println();
+    }
+
+    /**
+     * 緯度経度ログのカラム定義
+     * @param pw print writer
+     * @throws FileNotFoundException
+     */
+    private static void writeLocationLogColumns(PrintWriter pw) throws FileNotFoundException {
+        // スポットログのヘッダのカラム名出力
+        pw.print("PersonId,Gender,Age,Day,CurrentTime,NttTime,Latitude,Longitude");
+        pw.println();
+    }
+
+    /**
+     * 緯度経度ログの出力
+     * @param pw 出力ストリーム
+     * @param currentTime 現在時刻
+     * @param persons エージェントのリスト
+     */
+    private static void writeLocationLog(PrintWriter pw, TTime currentTime, List<TAgent> persons) {
+        // ※参考 カラム >> PersonId,Gender,Age,Day,CurrentTime,NttTime,Latitude,Longitude
+        // 時刻を変換
+        String HHMM = Day.formatTime(currentTime.getHour(),currentTime.getMinute());
+        Day.DayType day = Day.getDay(currentTime.getDay());
+        for (TAgent person : persons) { // 各エージェントから残りの情報を取得
+            // PersonId
+            pw.print("," + person.getName());
+            // Gender
+            TRoleOfSyntheticPopulationData spDataRole = (TRoleOfSyntheticPopulationData) person.getRole(ERoleName.SyntheticPopulationData);
+            Behavior.Gender gender = (spDataRole.getSyntheticPopulationData().getGenderId() == 0) ? Behavior.Gender.MALE: Behavior.Gender.FEMALE;
+            pw.print("," + gender);
+            // Age
+            pw.print("," + spDataRole.getSyntheticPopulationData().getAge());
+            // Day
+            pw.print("," + day);
+            // CurrentTime
+            pw.print("," + currentTime);
+            // NttTime
+            pw.print("," + Day.formatTime(currentTime.getHour(),currentTime.getMinute()));
+            // LatLon
+
+        }
+        pw.println();
+        pw.flush();
     }
 }

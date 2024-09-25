@@ -1,0 +1,4 @@
+"prefecture_code","prefecture_name","city_code","city_name","town_code","town_name","latitude","longitude","household_id","family_type_id","family_type","num_member","abnormal_household","person_id","age","gender_id","gender","role_household_type_id","role_household_type","industry_type_id","industry_type","employment_type_id","employment_type","company_size_id","company_size","total_income"
+"15","新潟県","15209","加茂市","15209151003","八幡３丁目","24.355299306085154","124.16799789811937","23711562","0","単独世帯","1","0","53122598","15","0","男性","0","単独世帯（男性）","","","","","","",""
+"15","新潟県","15209","加茂市","15209156001","神明町１丁目","24.356327380604114","124.16840446592516","23711563","0","単独世帯","1","0","53122599","16","0","男性","0","単独世帯（男性）","","","","","","",""
+"15","新潟県","15209","加茂市","15209167000","希望ケ丘","24.359574537068053","124.16914114588981","23711564","0","単独世帯","1","0","53122600","17","0","男性","0","単独世帯（男性）","","","","","","",""

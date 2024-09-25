@@ -50,20 +50,16 @@ public final class RuleOfDecideBehavior extends TAgentRule {
 
             /** 現在と次の行為で、外出/在宅が異なる場合、移動ルールを次のステージに予約 */
             Behavior.BehaviorType currentBehavior = behaviorRole.getCurrentBehavior();
-            if (currentBehavior == nextBehavior) { // 前後で行為種別が同じ
-                behaviorRole.setCurrentBehavior(nextBehavior);// 行為を更新
-            } else { // 前後で行為種別が異なる
-                if (Behavior.BEHAVIOR_LOCATION_LABEL.get(nextBehavior) == Behavior.LocationDependency.LOCATION_INDEPENDENT){ // 次の行為種別が活動場所を限定されない
-                    // 行為の実行場所が限定されない．>> 移動を必要としない
-                    behaviorRole.setCurrentBehavior(nextBehavior);// 行為を更新
-                } else { // 次の行為種別が活動場所を限定する可能性を有する．
+            if (currentBehavior != nextBehavior) { // 前後で行為種別が異なる
+                if (Behavior.BEHAVIOR_LOCATION_LABEL.get(nextBehavior) != Behavior.LocationDependency.LOCATION_INDEPENDENT){ // 次の行為種別が活動場所を限定する可能性を有する．
                     List<TSpot> candidateSpots = BehaviorLocator.getCandidateSpots(getAgent(),nextBehavior,currentTime);
                     if (!candidateSpots.isEmpty()) { // 候補が存在する場合
 //                        System.out.println(getAgent().getCurrentSpot().getName() + ":" + tripperRole.isActive() + " @RuleOfDecideBehavior");
-                        tripperRole.reservePlanning(getAgent().getCurrentSpot(),candidateSpots); // 移動を計画する．
+                        tripperRole.reservePlanning(getAgent().getCurrentSpot(), candidateSpots); // 移動を計画する．
                     }
                 }
             }
+            behaviorRole.setCurrentBehavior(nextBehavior);// 行為を更新
         }
     }
 }

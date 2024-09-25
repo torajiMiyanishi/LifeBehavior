@@ -1,6 +1,8 @@
 import jp.soars.core.*;
+import jp.soars.modules.gis_otp.otp.TOtpResult;
 import jp.soars.modules.gis_otp.otp.TOtpResult.EOtpStatus;
 import jp.soars.modules.gis_otp.role.*;
+import jp.soars.modules.gis_otp.otp.TOtpState;
 import org.opentripplanner.routing.core.TraverseMode;
 import org.opentripplanner.routing.core.TraverseModeSet;
 
@@ -19,7 +21,7 @@ public class RoleOfTripper extends TRole implements IRoleOfPlanning {
     /** 計画をするルール */
     public static final String RULE_NAME_OF_PLANNING = "Planing";
 
-    /** 移動行動が終了したら，フラグを操作する */
+    /** 移動行動が終了したら，自身をディアクティベートする */
     public static final String RULE_NAME_OF_DEACTIVATE = "Deactivate";
 
     /** ルール名重複を回避する変数 */
@@ -29,8 +31,9 @@ public class RoleOfTripper extends TRole implements IRoleOfPlanning {
     /** TRoleOfGisAgentの役割名 */
     public static final Enum<?> GIS_AGENT = jp.soars.modules.gis_otp.role.ERoleName.GisAgent;
 
-    /** 旅行中か否か */
-    private boolean fIsTraveling;
+    /** 移動情報を保持 */
+
+
 
     /** 起点 */
     private TSpot fOriginSpot;
@@ -38,7 +41,6 @@ public class RoleOfTripper extends TRole implements IRoleOfPlanning {
     private List<TSpot> fPrioritizedPois;
     /** 現在時刻 */
     private TTime fCurrentTime;
-
 
 
     /**
@@ -49,8 +51,8 @@ public class RoleOfTripper extends TRole implements IRoleOfPlanning {
     public RoleOfTripper(TAgent owner, TTime time){
         super(RoleName.Tripper, owner);
         fCurrentTime = time;
-        fIsTraveling = false;
     }
+
 
     /**
      * 動的な行動計画の予約
@@ -60,9 +62,7 @@ public class RoleOfTripper extends TRole implements IRoleOfPlanning {
         fPrioritizedPois = prioritizeCandidates(candidatePois); // poiを評価して優先順位付け
         ruleNo++ ;
 
-
         if (getRule(RULE_NAME_OF_PLANNING + ruleNo) == null && !getOwner().getRole(RoleName.Tripper).isActive()){
-//        if (!getOwner().getRole(RoleName.Tripper).isActive()){
                 getOwner().activateRole(RoleName.Tripper);
                 TRuleOfPlanning planning = new TRuleOfPlanning(RULE_NAME_OF_PLANNING + ruleNo, getOwner().getRole(RoleName.Tripper));
                 planning.setTimeAndStage(fCurrentTime.getDay(), fCurrentTime.getHour(), fCurrentTime.getMinute(), 0, EStage.AgentPlanning); //叩かれたその時に計画
@@ -101,16 +101,21 @@ public class RoleOfTripper extends TRole implements IRoleOfPlanning {
         int minute = currentTime.getMinute(); //家を出発する分
         boolean arriveBy = false; //出発時刻で検索
         TTripInformation ti = null;
+        TSpot determinedDestination = null;
         for (TSpot poiSpot: fPrioritizedPois){
             ti = rga.findRoute(hour, minute, arriveBy, traverseModeSet, ((TAgent) getOwner()).getCurrentSpot(), poiSpot); //経路検索
             if (ti != null) { //経路が見つかったら
                 if (ti.getSearchStatus() == EOtpStatus.SUCCESS) // tripが成功するならば
+                    determinedDestination = poiSpot; // ログ用に決定した目的地を保存
                     break;
             }
         }
         RuleOfDeactivate deactivateRule = new RuleOfDeactivate(RULE_NAME_OF_DEACTIVATE + ruleNo, this);
-        if (ti != null && ti.getSearchStatus() == EOtpStatus.SUCCESS){ // 経路が存在し，tripとして成立しているの出れば
+        if (ti != null && ti.getSearchStatus() == EOtpStatus.SUCCESS && determinedDestination != null){ // 経路が存在し，tripとして成立しているの出れば
             rga.scheduleToMove(currentTime.getDay(), ti); // 移動をスケジュール
+            // locationLog用に 成功したルートでTOtpResultを取りに行く
+//            TOtpResult successedResult = rga.findRoutes(1,traverseModeSet,arriveBy,hour,minute,((TAgent) getOwner()).getCurrentSpot(),determinedDestination);
+
 //            System.out.println("DD:"+ti.getEndDay()+", HH:"+ti.getEndHour()+", MM:"+ti.getEndMinute()+" @RoleOfTripper");
             deactivateRule.setTimeAndStage(ti.getEndDay(),ti.getEndHour(),ti.getEndMinute(),0,Stage.Deactivate);//旅行計画が正常にスケジュールされた場合は，trip終了時刻に不活性化
         } else {
@@ -182,6 +187,9 @@ public class RoleOfTripper extends TRole implements IRoleOfPlanning {
     private TraverseModeSet determineModeSet(){
         return new TraverseModeSet(TraverseMode.CAR);
     }
+
+
+
 
 }
 
