@@ -77,17 +77,18 @@ public class Main {
         // gisデータ類のパス
 //        String dirToInput = "C:\\Users\\tora2\\IdeaProjects\\LifeBehavior\\";
         String dirToInput = "Z:\\lab\\";
-        String pathOfPopulationDataFile = dirToInput + "input/2015_003_8_47207_ok.csv"; //合成人口データファイル
+        String pathOfPopulationDataFile = dirToInput + "input/2015_003_8_47207_ok_10000.csv"; //合成人口データファイル
 //        String pathOfPopulationDataFile = "C:\\Users\\tora2\\IdeaProjects\\LifeBehavior\\input\\2015_003_8_47207_ok_10.csv";
         String pathToPoi = "Z:\\lab\\zenrin_poi\\modified\\47207.csv"; //日中の活動場所の建物座標データファイル
         String pathToPbf = dirToInput + "input/Ishigakishi.osm.pbf"; //OpenStreetMap用のPBFファイル
         String dirToGtfs = dirToInput + "input"; //石垣市のGTFSファイルが格納されているディレクトリ
 
         // ルールログとランタイムログの出力設定
-        String pathOfLogDir = "C:\\Users\\tora2\\IdeaProjects\\LifeBehavior\\logs";
+        String pathOfLogCDir = "C:\\Users\\torafumi.miyanishi\\TmpLogs\\logs";
+        String pathOfLogZDir = "Z:\\lab\\output\\logs";
 //        String pathOfLogDir = "Z:\\lab\\output\\logs";
-        builder.setRuleLoggingEnabled(pathOfLogDir + File.separator + "rule_log.csv");
-        builder.setRuntimeLoggingEnabled(pathOfLogDir + File.separator + "runtime_log.csv");
+        builder.setRuleLoggingEnabled(pathOfLogZDir + File.separator + "rule_log.csv");
+        builder.setRuntimeLoggingEnabled(pathOfLogZDir + File.separator + "runtime_log.csv");
         String personTripLog = "person_trips"; //移動ログ
         String spotLog = "spot_log.csv"; //スポットログ
         String behaviorLog = "behavior_log.csv"; // 行為ログ
@@ -187,16 +188,16 @@ public class Main {
         //   - スポットログ:各時刻での各エージェントの現在位置ログ
         // *************************************************************************************************************
         // print writerを作り，カラムを出力
-        PrintWriter behaviorLogPW = new PrintWriter(pathOfLogDir + File.separator + behaviorLog);// 行為ログ用PrintWriter
+        PrintWriter behaviorLogPW = new PrintWriter(pathOfLogZDir + File.separator + behaviorLog);// 行為ログ用PrintWriter
         writePivotColumns(behaviorLogPW,persons);
-        PrintWriter spotLogPW = new PrintWriter(pathOfLogDir + File.separator + spotLog); // スポットログ
+        PrintWriter spotLogPW = new PrintWriter(pathOfLogZDir + File.separator + spotLog); // スポットログ
         writePivotColumns(spotLogPW,persons);
-        PrintWriter locationPW = new PrintWriter(pathOfLogDir + File.separator + locationLog); // 位置情報ログ
+        PrintWriter locationPW = new PrintWriter(pathOfLogZDir + File.separator + locationLog); // 位置情報ログ
         writeLocationLogColumns(locationPW);
 
 
         // git-otp-moduleの設定
-        TPersonTripLogger.open(pathOfLogDir, personTripLog); //移動ログをオープン
+        TPersonTripLogger.open(pathOfLogCDir, personTripLog); //移動ログをオープン
         TThreadLocalOfOtpRouter.initialize(pathToPbf, dirToGtfs); //OTPルータの初期化
         // *************************************************************************************************************
         // シミュレーションのメインループ
@@ -214,7 +215,7 @@ public class Main {
             // 行為ログ出力
             writeBehaviorLog(behaviorLogPW,ruleExecutor.getCurrentTime(),persons);
             // 位置情報ログ
-            if (ruleExecutor.getCurrentTime().getMinute()%15 == 0){ // 位置情報は15分に一度書き出す．
+            if (ruleExecutor.getCurrentTime().getMinute() == 0){ // 位置情報は一時間に一度書き出す．
                 writeLocationLog(locationPW,ruleExecutor.getCurrentTime(),persons);
             }
 

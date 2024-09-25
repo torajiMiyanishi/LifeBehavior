@@ -128,7 +128,6 @@ public class RoleOfTripper extends TRole implements IRoleOfPlanning {
                 System.err.println("DeterminedDestination is NULL @RoleOfTripper");
             }
             deactivateRule.setTimeAndStage(currentTime.getDay(),currentTime.getHour(),currentTime.getMinute(),0,Stage.Deactivate);//旅行計画が失敗した場合，即刻不活性化．
-//            System.exit(1);
             /**
              * 今後，どこにも移動できなくなってしまう状況に陥ることが発生しうる場合，対処法をここに記述
              */

@@ -156,8 +156,11 @@ public class TOtpRouter {
         if (paths.isEmpty()) {
             return new TOtpResult(EOtpStatus.NO_ROUTE, null, null);
         }
-        TripPlan tripPlan = GraphPathToTripPlanConverter.generatePlan(paths, routingRequest);
-        return new TOtpResult(EOtpStatus.SUCCESS, paths, tripPlan);
+        try {
+            TripPlan tripPlan = GraphPathToTripPlanConverter.generatePlan(paths, routingRequest);
+            return new TOtpResult(EOtpStatus.SUCCESS, paths, tripPlan);
+        } catch(TrivialPathException tpe) {
+            return new TOtpResult(EOtpStatus.TRIVIAL_PATH, null, null);
+        }
     }
-    
 }
