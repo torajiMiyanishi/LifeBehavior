@@ -20,6 +20,7 @@ import jp.soars.modules.gis_otp.logger.TPersonTripLogger;
 import jp.soars.modules.gis_otp.otp.TThreadLocalOfOtpRouter;
 import jp.soars.modules.gis_otp.role.*;
 
+import jp.soars.modules.gis_otp.sample.ESpotType;
 import jp.soars.modules.gis_otp.sample.TRoleOfPerson;
 import jp.soars.modules.synthetic_population.TRoleOfSyntheticPopulationData;
 import jp.soars.modules.synthetic_population.TSyntheticPopulationData;
@@ -55,7 +56,7 @@ public class Main {
         String tick                = "0:01:00";
         String behaviorTick        = "0:05:00"; // 行為決定のティック
         long seed = 10400L; // マスターシード値
-        List<Enum<?>> stages = List.of(Stage.DecideBehavior, EStage.AgentPlanning, EStage.AgentMoving, Stage.Deactivate, Stage.LocationFetching);
+        List<Enum<?>> stages = List.of(Stage.DecideBehavior, EStage.AgentPlanning, EStage.AgentMoving, Stage.Deactivate);
         Set<Enum<?>> layers = new HashSet<>();
         Collections.addAll(layers, Layer.values());
         Layer defaultLayer = Layer.Geospatial;
@@ -76,7 +77,7 @@ public class Main {
         // gisデータ類のパス
 //        String dirToInput = "C:\\Users\\tora2\\IdeaProjects\\LifeBehavior\\";
         String dirToInput = "Z:\\lab\\";
-        String pathOfPopulationDataFile = dirToInput + "input/2015_003_8_47207_ok_100.csv"; //合成人口データファイル
+        String pathOfPopulationDataFile = dirToInput + "input/2015_003_8_47207_ok.csv"; //合成人口データファイル
 //        String pathOfPopulationDataFile = "C:\\Users\\tora2\\IdeaProjects\\LifeBehavior\\input\\2015_003_8_47207_ok_10.csv";
         String pathToPoi = "Z:\\lab\\zenrin_poi\\modified\\47207.csv"; //日中の活動場所の建物座標データファイル
         String pathToPbf = dirToInput + "input/Ishigakishi.osm.pbf"; //OpenStreetMap用のPBFファイル
@@ -214,7 +215,7 @@ public class Main {
             writeBehaviorLog(behaviorLogPW,ruleExecutor.getCurrentTime(),persons);
             // 位置情報ログ
             if (ruleExecutor.getCurrentTime().getMinute()%15 == 0){ // 位置情報は15分に一度書き出す．
-
+                writeLocationLog(locationPW,ruleExecutor.getCurrentTime(),persons);
             }
 
         }
@@ -354,7 +355,7 @@ public class Main {
         Day.DayType day = Day.getDay(currentTime.getDay());
         for (TAgent person : persons) { // 各エージェントから残りの情報を取得
             // PersonId
-            pw.print("," + person.getName());
+            pw.print(person.getName());
             // Gender
             TRoleOfSyntheticPopulationData spDataRole = (TRoleOfSyntheticPopulationData) person.getRole(ERoleName.SyntheticPopulationData);
             Behavior.Gender gender = (spDataRole.getSyntheticPopulationData().getGenderId() == 0) ? Behavior.Gender.MALE: Behavior.Gender.FEMALE;
@@ -366,11 +367,20 @@ public class Main {
             // CurrentTime
             pw.print("," + currentTime);
             // NttTime
-            pw.print("," + Day.formatTime(currentTime.getHour(),currentTime.getMinute()));
+            pw.print("," + HHMM);
             // LatLon
-
+            Double[] latlon = new Double[2];
+            TSpot currentSpot = person.getCurrentSpot();
+            if (currentSpot.getType() == ESpotType.SpotOnTheWay){ // 途中スポットの場合
+                RoleOfTripper tripperRole = (RoleOfTripper) person.getRole(RoleName.Tripper);
+                latlon = tripperRole.getCurrentLatLon();
+            } else if (currentSpot.getType() == SpotType.Home) { // 地理空間上のスポットの場合
+                TRoleOfGisSpot gisSpotRole = (TRoleOfGisSpot) currentSpot.getRole(jp.soars.modules.gis_otp.role.ERoleName.GisSpot);
+                latlon = new Double[] {gisSpotRole.getLatitude(),gisSpotRole.getLongitude()};
+            }
+            pw.print("," + latlon[0] + "," + latlon[1]);
+            pw.println();
         }
-        pw.println();
         pw.flush();
     }
 }

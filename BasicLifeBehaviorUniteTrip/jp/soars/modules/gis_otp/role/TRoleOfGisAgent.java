@@ -102,7 +102,6 @@ public class TRoleOfGisAgent extends TRole {
      *                                      MODE_GONDOLA, MODE_FUNICULAR, 
      *                                      MODE_AIRPLANE, MODE_TRANSIT, MODE_ALL)
      * @param arriveBy true:到着時刻で検索する、false:出発時刻で検索する
-     * @param day 日
      * @param hour 時
      * @param minute 分
      * @param origin 出発スポット
@@ -110,7 +109,7 @@ public class TRoleOfGisAgent extends TRole {
      * @return 経路検索結果
      * @throws IOException 
      */
-    private TOtpResult findRoutes(int maxNoOfItineraries, TraverseModeSet traverseModeSet, boolean arriveBy,
+    public TOtpResult findRoutes(int maxNoOfItineraries, TraverseModeSet traverseModeSet, boolean arriveBy,
                                  int hour, int minute, TSpot origin, TSpot destination) {
         TOtpRouter router = TThreadLocalOfOtpRouter.get();
         double lat1 = ((TRoleOfGisSpot)origin.getRole(ERoleName.GisSpot)).getLatitude();
@@ -306,6 +305,25 @@ public class TRoleOfGisAgent extends TRole {
                                 day, ri.getEndHour(), ri.getEndMinute(), 
                                 ri.getOrigin().getName(), ri.getDestination().getName(), ri.getRouteID(),
                                 ri.getModes(), ri.getTimeForWalking(), ri.getDistanceForWalking());
+    }
+
+    /**
+     * 移動をスケジュールして，移動をロギングする． 日付を超過した移動に対応
+     * @param ri 移動情報
+     */
+    public void scheduleToMove(TTripInformation ri) {
+        TAgent owner = (TAgent)getOwner();
+        TRoleOfGisAgent roleOfGis = (TRoleOfGisAgent)owner.getRole(jp.soars.modules.gis_otp.role.ERoleName.GisAgent);
+        TRoleOfSyntheticPopulationData roleOfSpd = (TRoleOfSyntheticPopulationData)owner.getRole(jp.soars.modules.synthetic_population.ERoleName.SyntheticPopulationData);
+        int personId = roleOfSpd.getSyntheticPopulationData().getPersonId();
+//        System.out.println("[ri.getStartDay()]"+ ri.getStartDay() + "[ri.getEndDay()]" + ri.getEndDay());
+        roleOfGis.scheduleToMove(ri.getStartDay(), ri.getStartHour(), ri.getStartMinute(),
+                ri.getEndDay(), ri.getEndHour(), ri.getEndMinute(),
+                ri.getOrigin(), ri.getDestination());
+        TPersonTripLogger.write(personId, ri.getStartDay(), ri.getStartHour(), ri.getStartMinute(),
+                ri.getEndDay(), ri.getEndHour(), ri.getEndMinute(),
+                ri.getOrigin().getName(), ri.getDestination().getName(), ri.getRouteID(),
+                ri.getModes(), ri.getTimeForWalking(), ri.getDistanceForWalking());
     }
 
 }

@@ -7,6 +7,4 @@ public enum Stage {
     Deactivate,
     /** 行為決定ステージ */
     DecideBehavior,
-    /** 人流データでの検証用にログを取得するステージ */
-    LocationFetching,
 }

@@ -92,7 +92,7 @@ public class RoleOfPerson extends TRole implements IRoleOfPlanning {
                 System.err.println("Failed to find a route at home.");
                 return;
             }
-            rga.scheduleToMove(currentTime.getDay(), ti); //移動をスケジュール
+            rga.scheduleToMove(ti); //移動をスケジュール
             //移動終了時刻の１分後に計画ルールをスケジュールする．
             int planningHour = ti.getEndHour();
             int planningMinute = ti.getEndMinute();
@@ -112,7 +112,7 @@ public class RoleOfPerson extends TRole implements IRoleOfPlanning {
                 System.err.println("Failed to find a route at home.");
                 return;
             }
-            rga.scheduleToMove(currentTime.getDay(), ti); //移動をスケジュール
+            rga.scheduleToMove(ti); //移動をスケジュール
             //明日の出発時刻の１時間前に計画ルールをスケジュールする．
             planning.setTimeAndStage(currentTime.getDay() + 1, fTimeOfLeavingHome.getHour() - 1, 0, 0, EStage.AgentPlanning);
         }

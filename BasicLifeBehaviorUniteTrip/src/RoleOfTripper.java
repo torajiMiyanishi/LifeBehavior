@@ -32,6 +32,7 @@ public class RoleOfTripper extends TRole implements IRoleOfPlanning {
     public static final Enum<?> GIS_AGENT = jp.soars.modules.gis_otp.role.ERoleName.GisAgent;
 
     /** 移動情報を保持 */
+    public static TOtpResult currentOtpResult;
 
 
 
@@ -112,21 +113,38 @@ public class RoleOfTripper extends TRole implements IRoleOfPlanning {
         }
         RuleOfDeactivate deactivateRule = new RuleOfDeactivate(RULE_NAME_OF_DEACTIVATE + ruleNo, this);
         if (ti != null && ti.getSearchStatus() == EOtpStatus.SUCCESS && determinedDestination != null){ // 経路が存在し，tripとして成立しているの出れば
-            rga.scheduleToMove(currentTime.getDay(), ti); // 移動をスケジュール
-            // locationLog用に 成功したルートでTOtpResultを取りに行く
-//            TOtpResult successedResult = rga.findRoutes(1,traverseModeSet,arriveBy,hour,minute,((TAgent) getOwner()).getCurrentSpot(),determinedDestination);
+            rga.scheduleToMove(ti); // 移動をスケジュール
+            currentOtpResult = rga.findRoutes(1,traverseModeSet,arriveBy,hour,minute,((TAgent) getOwner()).getCurrentSpot(),determinedDestination); // ログ用にTOtpResultを再取得
+
 
 //            System.out.println("DD:"+ti.getEndDay()+", HH:"+ti.getEndHour()+", MM:"+ti.getEndMinute()+" @RoleOfTripper");
             deactivateRule.setTimeAndStage(ti.getEndDay(),ti.getEndHour(),ti.getEndMinute(),0,Stage.Deactivate);//旅行計画が正常にスケジュールされた場合は，trip終了時刻に不活性化
         } else {
-            System.err.println("Failed to find any route. @RoleOfTripper");
+            if (ti == null){
+                System.err.println("Failed to find any route. @RoleOfTripper");
+            } else if (ti.getSearchStatus() != EOtpStatus.SUCCESS){
+                System.err.println("Status of trip information is NOT SUCCESS. @RoleOfTripper");
+            } else {
+                System.err.println("DeterminedDestination is NULL @RoleOfTripper");
+            }
             deactivateRule.setTimeAndStage(currentTime.getDay(),currentTime.getHour(),currentTime.getMinute(),0,Stage.Deactivate);//旅行計画が失敗した場合，即刻不活性化．
-            System.exit(1);
+//            System.exit(1);
             /**
              * 今後，どこにも移動できなくなってしまう状況に陥ることが発生しうる場合，対処法をここに記述
              */
         }
     }
+
+    /**
+     * TripperRoleが一つのTripが終了したとき実行するメソッド
+     * 1.TripperRoleをディアクティベートする
+     * 2.TripperRoleが持つTOtpResultをnullにする
+     */
+    public void endTripExecution(){
+        currentOtpResult = null; // tripが終了したら情報を消去する
+        getOwner().deactivateRole(RoleName.Tripper);
+    }
+
 
     /**
      * 以下のルールに従って，移動手段を決定する．
@@ -189,7 +207,15 @@ public class RoleOfTripper extends TRole implements IRoleOfPlanning {
     }
 
 
-
+    /**
+     * 現在時刻の
+     * @return latlon 緯度経度の配列
+     */
+    public Double[] getCurrentLatLon(){
+        // locationLog用に 成功したルートでTOtpResultを取りに行く
+        TOtpState otpState = currentOtpResult.getState(1,fCurrentTime.getHour(),fCurrentTime.getMinute());
+        return new Double[] {otpState.getLatitude(), otpState.getLongitude()};
+    }
 
 }
 

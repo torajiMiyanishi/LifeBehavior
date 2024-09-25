@@ -1,4 +1,5 @@
 import jp.soars.core.*;
+import org.locationtech.jts.geom.Triangle;
 
 import java.util.Map;
 
@@ -33,6 +34,7 @@ public final class RuleOfDeactivate extends TAgentRule {
     public final void doIt(TTime currentTime, Enum<?> currentStage, TSpotManager spotManager,
                            TAgentManager agentManager, Map<String, Object> globalSharedVariables) {
 //        System.out.println("deactivate が発火しました　@RuleOfDeactivate");
-        getAgent().deactivateRole(RoleName.Tripper);
+        RoleOfTripper tripperRole = (RoleOfTripper) getAgent().getRole(RoleName.Tripper);
+        tripperRole.endTripExecution();
     }
 }
