@@ -2,6 +2,7 @@ package jp.soars.modules.gis_otp.role;
 
 import jp.soars.core.TSpot;
 import jp.soars.modules.gis_otp.otp.TOtpResult.EOtpStatus;
+import jp.soars.modules.gis_otp.otp.TOtpState;
 
 /**
  * 移動情報クラス．
@@ -12,6 +13,9 @@ public class TTripInformation {
 
     /** 検索状態 */
     private EOtpStatus fSearchStatus;
+
+    /** ログ用 */
+    public TOtpState fOtpState;
 
     /** データ */
     private TData fData;
@@ -383,5 +387,4 @@ public class TTripInformation {
             throw new RuntimeException("Search status is no EOtpStatus.SUCCESS");
         }
     }
-
 }

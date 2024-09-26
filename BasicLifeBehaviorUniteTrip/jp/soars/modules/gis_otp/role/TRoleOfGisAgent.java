@@ -29,6 +29,9 @@ public class TRoleOfGisAgent extends TRole {
     /** 目的地へ直接移動するルール */
     public static final String RULE_NAME_OF_MOVING_DIRECTLY_TO_DESTINATION = "MoveDirectlyToDestination";
 
+    /** ルールナンバー */
+    public static int ruleNo;
+
     /** 経路探索を行う年のデフォルト値 */
     public static final int DEFAULT_YEAR_OF_TIME_TABLE = 2024;
 
@@ -56,6 +59,7 @@ public class TRoleOfGisAgent extends TRole {
         new TRuleOfLeavingOrigin(RULE_NAME_OF_LEAVING_ORIGIN, this);
         new TRuleOfArrivingAtDestination(RULE_NAME_OF_ARRIVING_AT_DESTINATION, this);
         new TRuleOfMovingDirectlyToDestination(RULE_NAME_OF_MOVING_DIRECTLY_TO_DESTINATION, this);
+        ruleNo = 0;
     }
 
     /**
@@ -137,17 +141,21 @@ public class TRoleOfGisAgent extends TRole {
                                TSpot origin, TSpot destination) {
         if (startHour == endHour && startMinute == endMinute) {
             //出発時刻と到着時刻が同じならば直接目的地へ移動
-            TRuleOfMovingDirectlyToDestination moving = (TRuleOfMovingDirectlyToDestination)getRule(RULE_NAME_OF_MOVING_DIRECTLY_TO_DESTINATION);
+//            TRuleOfMovingDirectlyToDestination moving = (TRuleOfMovingDirectlyToDestination)getRule(RULE_NAME_OF_MOVING_DIRECTLY_TO_DESTINATION);
+            TRuleOfMovingDirectlyToDestination moving = new TRuleOfMovingDirectlyToDestination(RULE_NAME_OF_MOVING_DIRECTLY_TO_DESTINATION + ruleNo, this);
             moving.setOriginAndDestination(origin, destination);
             moving.setTimeAndStage(startDay, startHour, startMinute, 0, EStage.AgentMoving);
         } else {
             //出発時刻と到着時刻が異なれば途中スポットを経由して移動
-            TRuleOfLeavingOrigin leaving = (TRuleOfLeavingOrigin)getRule(RULE_NAME_OF_LEAVING_ORIGIN);
+//            TRuleOfLeavingOrigin leaving = (TRuleOfLeavingOrigin)getRule(RULE_NAME_OF_LEAVING_ORIGIN);
+            TRuleOfLeavingOrigin leaving = new TRuleOfLeavingOrigin(RULE_NAME_OF_LEAVING_ORIGIN + ruleNo,this);
             leaving.setOriginAndDestination(origin, destination);
-            leaving.setTimeAndStage(startDay, startHour, startMinute, 0, EStage.AgentMoving);
-            TRuleOfArrivingAtDestination arriving = (TRuleOfArrivingAtDestination)getRule(RULE_NAME_OF_ARRIVING_AT_DESTINATION);
-            arriving.setTimeAndStage(endDay, endHour, endMinute, 0, EStage.AgentMoving);    
-        }                
+            leaving.setTimeAndStage(startDay ,startHour, startMinute, 0, EStage.AgentMoving);
+//            TRuleOfArrivingAtDestination arriving = (TRuleOfArrivingAtDestination)getRule(RULE_NAME_OF_ARRIVING_AT_DESTINATION);
+            TRuleOfArrivingAtDestination arriving = new TRuleOfArrivingAtDestination(RULE_NAME_OF_ARRIVING_AT_DESTINATION + ruleNo, this);
+            arriving.setTimeAndStage(endDay, endHour, endMinute, 0, EStage.AgentMoving);
+        }
+        ruleNo++; // ルールナンバーを更新
     }
 
     /**

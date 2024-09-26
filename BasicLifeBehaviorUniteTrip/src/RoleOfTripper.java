@@ -32,9 +32,7 @@ public class RoleOfTripper extends TRole implements IRoleOfPlanning {
     public static final Enum<?> GIS_AGENT = jp.soars.modules.gis_otp.role.ERoleName.GisAgent;
 
     /** 移動情報を保持 */
-    public static TOtpResult currentOtpResult;
-
-
+    public static Map<TTime,Double[]> inTripLocations = new HashMap<>();
 
     /** 起点 */
     private TSpot fOriginSpot;
@@ -64,9 +62,10 @@ public class RoleOfTripper extends TRole implements IRoleOfPlanning {
         ruleNo++ ;
 
         if (getRule(RULE_NAME_OF_PLANNING + ruleNo) == null && !getOwner().getRole(RoleName.Tripper).isActive()){
-                getOwner().activateRole(RoleName.Tripper);
-                TRuleOfPlanning planning = new TRuleOfPlanning(RULE_NAME_OF_PLANNING + ruleNo, getOwner().getRole(RoleName.Tripper));
-                planning.setTimeAndStage(fCurrentTime.getDay(), fCurrentTime.getHour(), fCurrentTime.getMinute(), 0, EStage.AgentPlanning); //叩かれたその時に計画
+            getOwner().activateRole(RoleName.Tripper);
+            TRuleOfPlanning planning = new TRuleOfPlanning(RULE_NAME_OF_PLANNING + ruleNo, getOwner().getRole(RoleName.Tripper));
+            planning.setTimeAndStage(fCurrentTime.getDay(), fCurrentTime.getHour(), fCurrentTime.getMinute(), 0, EStage.AgentPlanning); //叩かれたその時に計画
+
         } else {
             if (getRule(RULE_NAME_OF_PLANNING + ruleNo) != null) {
                 System.err.println("Try to reserve the duplicated rule @RoleOfTripper");
@@ -106,15 +105,32 @@ public class RoleOfTripper extends TRole implements IRoleOfPlanning {
         for (TSpot poiSpot: fPrioritizedPois){
             ti = rga.findRoute(hour, minute, arriveBy, traverseModeSet, ((TAgent) getOwner()).getCurrentSpot(), poiSpot); //経路検索
             if (ti != null) { //経路が見つかったら
-                if (ti.getSearchStatus() == EOtpStatus.SUCCESS) // tripが成功するならば
+                if (ti.getSearchStatus() == EOtpStatus.SUCCESS) {// tripが成功するならば
                     determinedDestination = poiSpot; // ログ用に決定した目的地を保存
                     break;
+                }
             }
         }
         RuleOfDeactivate deactivateRule = new RuleOfDeactivate(RULE_NAME_OF_DEACTIVATE + ruleNo, this);
         if (ti != null && ti.getSearchStatus() == EOtpStatus.SUCCESS && determinedDestination != null){ // 経路が存在し，tripとして成立しているの出れば
             rga.scheduleToMove(ti); // 移動をスケジュール
-            currentOtpResult = rga.findRoutes(1,traverseModeSet,arriveBy,hour,minute,((TAgent) getOwner()).getCurrentSpot(),determinedDestination); // ログ用にTOtpResultを再取得
+            TOtpResult currentOtpResult = rga.findRoutes(1,traverseModeSet,arriveBy,hour,minute,ti.getOrigin(),ti.getDestination()); // ログ用にTOtpResultを再取得
+            TTime inTripTime = new TTime(ti.getStartDay(), ti.getStartHour(), ti.getStartMinute(),0);
+//            System.out.println(this + "this @RoleOfTripper");
+//            System.out.println("currentOtpResult:" + currentOtpResult);
+//            System.out.println("inTripTime:" + inTripTime);
+//            System.out.println("getEnd: DD:" + ti.getEndDay() +" HH:"+ ti.getEndHour() +"MM:"+ ti.getEndMinute());
+            while (inTripTime.isLessThan(new TTime(ti.getEndDay(), ti.getEndHour(), ti.getEndMinute(), 0))){
+//                System.out.println("inTripTime:" + inTripTime);
+                try{
+                    TOtpState otpState = currentOtpResult.getState(0,inTripTime.getHour(),inTripTime.getMinute());
+                    inTripLocations.put(new TTime(inTripTime), new Double[] {otpState.getLatitude(),otpState.getLongitude()});
+                } catch (NullPointerException n) {
+                    System.err.println("GetState return null @RoleOfTripper");
+                }
+                inTripTime.add(0,1,0); // 1step分ずつ増やす
+            }
+//            System.out.println(inTripLocations);
 
 
 //            System.out.println("DD:"+ti.getEndDay()+", HH:"+ti.getEndHour()+", MM:"+ti.getEndMinute()+" @RoleOfTripper");
@@ -134,14 +150,26 @@ public class RoleOfTripper extends TRole implements IRoleOfPlanning {
         }
     }
 
+
     /**
      * TripperRoleが一つのTripが終了したとき実行するメソッド
      * 1.TripperRoleをディアクティベートする
-     * 2.TripperRoleが持つTOtpResultをnullにする
+     * 2.位置情報のログを初期化する。（安全のため、2時間を超過した記録のみ削除）
      */
     public void endTripExecution(){
-        currentOtpResult = null; // tripが終了したら情報を消去する
+        // ディアクティベート
         getOwner().deactivateRole(RoleName.Tripper);
+        // 位置情報記録のセーフティな削除
+        if (fCurrentTime.isGreaterThan(new TTime(0,2,1,0))){ // シミュレーション開始時刻よりも前を参照しないためのガードコード
+            Iterator<Map.Entry<TTime, Double[]>> iterator = inTripLocations.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<TTime, Double[]> entry = iterator.next();
+                TTime keyTime = entry.getKey();
+                if (keyTime.isLessThan(fCurrentTime.getDay(), fCurrentTime.getHour() - 2, fCurrentTime.getMinute(), 0)) { // 二時間以上前のものは
+                    iterator.remove(); // 安全に削除
+                }
+            }
+        }
     }
 
 
@@ -212,8 +240,8 @@ public class RoleOfTripper extends TRole implements IRoleOfPlanning {
      */
     public Double[] getCurrentLatLon(){
         // locationLog用に 成功したルートでTOtpResultを取りに行く
-        TOtpState otpState = currentOtpResult.getState(1,fCurrentTime.getHour(),fCurrentTime.getMinute());
-        return new Double[] {otpState.getLatitude(), otpState.getLongitude()};
+        Double[] latlon = inTripLocations.get(fCurrentTime);
+        return latlon;
     }
 
 }

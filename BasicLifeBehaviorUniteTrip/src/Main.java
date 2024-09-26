@@ -40,6 +40,7 @@ import javax.management.relation.Role;
  */
 public class Main {
 
+
     public static void main(String[] args) throws Exception {
         // *************************************************************************************************************
         // TSOARSBuilderの必須設定項目
@@ -56,6 +57,7 @@ public class Main {
         String tick                = "0:01:00";
         String behaviorTick        = "0:05:00"; // 行為決定のティック
         long seed = 10400L; // マスターシード値
+        int noOfPerple = 1000;
         List<Enum<?>> stages = List.of(Stage.DecideBehavior, EStage.AgentPlanning, EStage.AgentMoving, Stage.Deactivate);
         Set<Enum<?>> layers = new HashSet<>();
         Collections.addAll(layers, Layer.values());
@@ -75,24 +77,26 @@ public class Main {
 //        builder.setRandomSeed(seed);
 
         // gisデータ類のパス
+
 //        String dirToInput = "C:\\Users\\tora2\\IdeaProjects\\LifeBehavior\\";
         String dirToInput = "Z:\\lab\\";
-        String pathOfPopulationDataFile = dirToInput + "input/2015_003_8_47207_ok_10000.csv"; //合成人口データファイル
+        String pathOfPopulationDataFile = dirToInput + "input/2015_003_8_47207_ok_"+noOfPerple+".csv"; //合成人口データファイル
 //        String pathOfPopulationDataFile = "C:\\Users\\tora2\\IdeaProjects\\LifeBehavior\\input\\2015_003_8_47207_ok_10.csv";
         String pathToPoi = "Z:\\lab\\zenrin_poi\\modified\\47207.csv"; //日中の活動場所の建物座標データファイル
         String pathToPbf = dirToInput + "input/Ishigakishi.osm.pbf"; //OpenStreetMap用のPBFファイル
         String dirToGtfs = dirToInput + "input"; //石垣市のGTFSファイルが格納されているディレクトリ
 
         // ルールログとランタイムログの出力設定
-        String pathOfLogCDir = "C:\\Users\\torafumi.miyanishi\\TmpLogs\\logs";
-        String pathOfLogZDir = "Z:\\lab\\output\\logs";
+        String pathOfLogCDir = "C:\\Users\\torafumi.miyanishi\\TmpLogs\\logs\\";
+        String pathOfLogZDir = "Z:\\lab\\output\\logs\\";
 //        String pathOfLogDir = "Z:\\lab\\output\\logs";
-        builder.setRuleLoggingEnabled(pathOfLogZDir + File.separator + "rule_log.csv");
-        builder.setRuntimeLoggingEnabled(pathOfLogZDir + File.separator + "runtime_log.csv");
-        String personTripLog = "person_trips"; //移動ログ
-        String spotLog = "spot_log.csv"; //スポットログ
-        String behaviorLog = "behavior_log.csv"; // 行為ログ
-        String locationLog = "location_log.csv"; // 位置情報（緯度経度）のログ
+        String fileNameHead = "seed_"+ seed + "_no_" + noOfPerple + "_";
+        builder.setRuleLoggingEnabled(pathOfLogZDir + File.separator + fileNameHead + "rule_log.csv");
+        builder.setRuntimeLoggingEnabled(pathOfLogZDir + File.separator + fileNameHead + "runtime_log.csv");
+        String personTripLog = fileNameHead + "person_trips"; //移動ログ
+        String spotLog = fileNameHead + "spot_log.csv"; //スポットログ
+        String behaviorLog = fileNameHead + "behavior_log.csv"; // 行為ログ
+        String locationLog = fileNameHead + "location_log.csv"; // 位置情報（緯度経度）のログ
 
         // ルールログのデバッグ情報出力設定
         builder.setRuleDebugMode(ERuleDebugMode.LOCAL);
@@ -197,7 +201,7 @@ public class Main {
 
 
         // git-otp-moduleの設定
-        TPersonTripLogger.open(pathOfLogCDir, personTripLog); //移動ログをオープン
+        TPersonTripLogger.open(pathOfLogCDir, fileNameHead + personTripLog); //移動ログをオープン
         TThreadLocalOfOtpRouter.initialize(pathToPbf, dirToGtfs); //OTPルータの初期化
         // *************************************************************************************************************
         // シミュレーションのメインループ
@@ -372,13 +376,27 @@ public class Main {
             // LatLon
             Double[] latlon = new Double[2];
             TSpot currentSpot = person.getCurrentSpot();
-            if (currentSpot.getType() == ESpotType.SpotOnTheWay){ // 途中スポットの場合
+            if (currentSpot.getType() == SpotType.SpotOnTheWay){ // 途中スポットの場合
                 RoleOfTripper tripperRole = (RoleOfTripper) person.getRole(RoleName.Tripper);
                 latlon = tripperRole.getCurrentLatLon();
-            } else if (currentSpot.getType() == SpotType.Home) { // 地理空間上のスポットの場合
+
+                if (latlon == null || latlon[0] == null || latlon[1] == null) {
+
+                    System.out.println(tripperRole);
+                    System.out.println(currentSpot);
+                    System.err.println("Cannot find current Latitude, Longitude FROM SpotOnTheWay @Main");
+                    System.exit(1);
+                }
+            } else if (currentSpot.getType() == SpotType.Home || currentSpot.getType() == SpotType.Poi) { // 地理空間上のスポットの場合
                 TRoleOfGisSpot gisSpotRole = (TRoleOfGisSpot) currentSpot.getRole(jp.soars.modules.gis_otp.role.ERoleName.GisSpot);
                 latlon = new Double[] {gisSpotRole.getLatitude(),gisSpotRole.getLongitude()};
             }
+            if (latlon == null || latlon[0] == null || latlon[1] == null) {
+                System.out.println(currentSpot);
+                System.err.println("Cannot find current Latitude, Longitude @Main");
+                System.exit(1);
+            }
+
             pw.print("," + latlon[0] + "," + latlon[1]);
             pw.println();
         }

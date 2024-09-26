@@ -26,9 +26,7 @@ public class TRuleOfLeavingOrigin extends TAgentRule {
      * @param name ルール名
      * @param owner オーナー役割
      */
-    public TRuleOfLeavingOrigin(String name, TRole owner) {
-        super(name, owner);
-    }
+    public TRuleOfLeavingOrigin(String name, TRole owner) { super(name, owner); }
 
     /**
      * 出発地スポットと目的地スポットを設定する．
