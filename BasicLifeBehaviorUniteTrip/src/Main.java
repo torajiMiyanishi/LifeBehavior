@@ -57,7 +57,7 @@ public class Main {
         String tick                = "0:01:00";
         String behaviorTick        = "0:05:00"; // 行為決定のティック
         long seed = 10400L; // マスターシード値
-        int noOfPerple = 1000;
+        int noOfPeople =40000;
         List<Enum<?>> stages = List.of(Stage.DecideBehavior, EStage.AgentPlanning, EStage.AgentMoving, Stage.Deactivate);
         Set<Enum<?>> layers = new HashSet<>();
         Collections.addAll(layers, Layer.values());
@@ -80,7 +80,7 @@ public class Main {
 
 //        String dirToInput = "C:\\Users\\tora2\\IdeaProjects\\LifeBehavior\\";
         String dirToInput = "Z:\\lab\\";
-        String pathOfPopulationDataFile = dirToInput + "input/2015_003_8_47207_ok_"+noOfPerple+".csv"; //合成人口データファイル
+        String pathOfPopulationDataFile = dirToInput + "input/2015_003_8_47207_ok_"+noOfPeople+".csv"; //合成人口データファイル
 //        String pathOfPopulationDataFile = "C:\\Users\\tora2\\IdeaProjects\\LifeBehavior\\input\\2015_003_8_47207_ok_10.csv";
         String pathToPoi = "Z:\\lab\\zenrin_poi\\modified\\47207.csv"; //日中の活動場所の建物座標データファイル
         String pathToPbf = dirToInput + "input/Ishigakishi.osm.pbf"; //OpenStreetMap用のPBFファイル
@@ -90,7 +90,7 @@ public class Main {
         String pathOfLogCDir = "C:\\Users\\torafumi.miyanishi\\TmpLogs\\logs\\";
         String pathOfLogZDir = "Z:\\lab\\output\\logs\\";
 //        String pathOfLogDir = "Z:\\lab\\output\\logs";
-        String fileNameHead = "seed_"+ seed + "_no_" + noOfPerple + "_";
+        String fileNameHead = "seed_"+ seed + "_no_" + noOfPeople + "_";
         builder.setRuleLoggingEnabled(pathOfLogZDir + File.separator + fileNameHead + "rule_log.csv");
         builder.setRuntimeLoggingEnabled(pathOfLogZDir + File.separator + fileNameHead + "runtime_log.csv");
         String personTripLog = fileNameHead + "person_trips"; //移動ログ
